@@ -1,15 +1,38 @@
-# backend/app/core/prompts.py
 YOUTUBE_ANALYSIS_PROMPT = """
 You are a Korean language teacher.
 
-From the following Korean transcript:
-1. Extract 5 useful expressions for intermediate learners
-2. Explain the grammar pattern briefly
-3. Rewrite each expression in:
-   - casual
-   - polite
-4. Create 2 new example sentences per expression
+Analyze the following Korean transcript and return the result in JSON.
 
 Transcript:
-{text}
+{transcript}
+
+Return JSON with this exact structure:
+{
+  "key_expressions": [
+    {
+      "expression": "...",
+      "meaning_en": "...",
+      "usage_note": "..."
+    }
+  ],
+  "grammar_points": [
+    {
+      "pattern": "...",
+      "explanation_en": "...",
+      "example_sentence": "..."
+    }
+  ],
+  "practice_sentences": [
+    {
+      "korean": "...",
+      "english": "..."
+    }
+  ]
+}
+
+Rules:
+- Choose expressions actually useful in real conversation
+- Avoid textbook-only grammar
+- Keep explanations clear for intermediate learners
+- Output valid JSON only
 """

@@ -1,19 +1,21 @@
-# backend/app/services/llm.py
-import openai
+import os
+import json
+from openai import OpenAI
 from app.core.prompts import YOUTUBE_ANALYSIS_PROMPT
 
-openai.api_key = "YOUR_API_KEY"
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def analyze_korean(text: str) -> str:
-    prompt = YOUTUBE_ANALYSIS_PROMPT.format(text=text[:3000])
+def analyze_transcript_with_llm(transcript: str) -> dict:
+    prompt = YOUTUBE_ANALYSIS_PROMPT.format(transcript=transcript[:4000])
 
-    response = openai.ChatCompletion.create(
-        model="gpt-4.1-mini",
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "You are a Korean language coach."},
+            {"role": "system", "content": "You are a helpful language tutor."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.6
+        temperature=0.4
     )
 
-    return response.choices[0].message.content
+    content = response.choices[0].message.content
+    return json.loads(content)
