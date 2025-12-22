@@ -1,8 +1,9 @@
 # backend/app/api/youtube.py
 from fastapi import APIRouter
 from pydantic import BaseModel
-from app.services.youtube import get_korean_transcript
-from app.services.llm import analyze_korean
+from fastapi import APIRouter
+from app.services.youtube import extract_video_id, get_korean_transcript
+
 
 router = APIRouter()
 
@@ -11,6 +12,10 @@ class YouTubeRequest(BaseModel):
 
 @router.post("/analyze-youtube")
 def analyze_youtube(req: YouTubeRequest):
-    transcript = get_korean_transcript(req.url)
-    result = analyze_korean(transcript)
-    return {"result": result}
+    video_id = extract_video_id(req.url)   # ⭐ 핵심
+    transcript = get_korean_transcript(video_id)
+
+    return {
+        "video_id": video_id,
+        "transcript": transcript
+    }
