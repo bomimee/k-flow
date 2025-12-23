@@ -1,6 +1,9 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 from fastapi import HTTPException
 import re
+import yt_dlp
+import os
+import uuid
 
 def extract_video_id(url: str) -> str:
     patterns = [
@@ -19,13 +22,41 @@ def extract_video_id(url: str) -> str:
 
 def get_korean_transcript(video_id: str) -> str:
     try:
-        transcript = YouTubeTranscriptApi.get_transcript(
-            video_id,
-            languages=["ko", "en"]
-        )
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
 
-        return " ".join(item["text"] for item in transcript)
+        # 1️⃣ 수동 자막 우선
+        if transcript_list.find_manually_created_transcript(["ko", "en"]):
+            transcript = transcript_list.find_manually_created_transcript(["ko", "en"])
+        else:
+            # 2️⃣ 자동 생성 자막 fallback
+            transcript = transcript_list.find_generated_transcript(["ko", "en"])
+
+        return " ".join(item["text"] for item in transcript.fetch())
 
     except Exception as e:
-        # 🔥 여기서 XML 파싱 에러, 자막 없음 등을 모두 잡음
+        print("❌ 자막 가져오기 실패:", e)
         return ""
+    
+
+def download_audio(video_url: str) -> str:
+    os.makedirs("tmp", exist_ok=True)
+
+    file_id = str(uuid.uuid4())
+    output_template = f"tmp/{file_id}.%(ext)s"
+
+    ydl_opts = {
+        "format": "bestaudio/best",
+        "outtmpl": output_template,
+        "postprocessors": [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": "mp3",
+        }],
+        "quiet": True,
+    }
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([video_url])
+
+    final_path = f"tmp/{file_id}.mp3"
+    print(f"final_path={final_path}")
+    return final_path
