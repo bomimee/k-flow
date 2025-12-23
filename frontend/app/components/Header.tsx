@@ -1,17 +1,30 @@
 // src/app/components/Header.tsx
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Header() {
   return (
-    <header className="border-b">
+    <header className="border-b bg-white">
       <nav className="container mx-auto flex justify-between items-center px-6 py-4">
-        <Link href="/" className="text-xl font-bold">
-          K-Flow
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 text-xl font-bold">
+          <Image
+            src="/letter-k.png"
+            alt="K Language Logo"
+            width={28}
+            height={28}
+          />
+          <span>LANGUAGE</span>
         </Link>
 
-        <div className="space-x-6">
-          <Link href="/practice">Practice</Link>
-          <Link href="/about">About</Link>
+        {/* Navigation */}
+        <div className="space-x-6 text-sm font-medium">
+          <Link href="/practice" className="hover:underline">
+            Practice
+          </Link>
+          <Link href="/about" className="hover:underline">
+            About
+          </Link>
         </div>
       </nav>
     </header>
