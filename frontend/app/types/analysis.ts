@@ -1,22 +1,21 @@
-export interface KeyExpression {
-  expression: string;
-  meaning_en: string;
-  usage_note: string;
-}
-
-export interface GrammarPoint {
-  pattern: string;
-  explanation_en: string;
-  example_sentence: string;
-}
-
-export interface PracticeSentence {
-  korean: string;
-  english: string;
-}
-
+// src/app/types/analysis.ts
 export interface AnalysisResult {
-  key_expressions: KeyExpression[];
-  grammar_points: GrammarPoint[];
-  practice_sentences: PracticeSentence[];
+  video_id: string;
+  source: string;
+  analysis: {
+    key_expressions: {
+      expression: string;
+      meaning_en: string;
+      usage_note: string;
+    }[];
+    grammar_points: {
+      pattern: string;
+      explanation_en: string;
+      example_sentence: string;
+    }[];
+    practice_sentences: {
+      korean: string;
+      english: string;
+    }[];
+  };
 }

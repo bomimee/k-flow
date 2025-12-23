@@ -2,11 +2,19 @@
 import "./globals.css";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { Montserrat } from "next/font/google";
 
 export const metadata = {
   title: "K-Flow | Learn Korean with AI",
   description: "Learn Korean through K-Drama, K-Pop and AI",
 };
+
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-montserrat",
+});
 
 export default function RootLayout({
   children,
@@ -14,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col bg-white text-gray-900">
+    <html lang="en" className={montserrat.variable}>
+      <body className="min-h-screen flex flex-col bg-white text-gray-900 --font-montserrat">
         <Header />
         <main className="flex-1 container mx-auto px-6 py-10">{children}</main>
         <Footer />
