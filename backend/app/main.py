@@ -13,3 +13,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(youtube_router)
+
+#uvicorn app.main:app --reload

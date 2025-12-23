@@ -4,3 +4,4 @@ pydantic
 youtube-transcript-api
 openai
 python-dotenv
+yt-dlp

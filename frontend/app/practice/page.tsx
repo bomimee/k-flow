@@ -1,16 +1,19 @@
-// frontend/src/app/practice/page.tsx
 "use client";
+// frontend/src/app/practice/page.tsx
+import type { AnalysisResult } from "@/app/types/analysis";
+
 
 import { useState } from "react";
 import { analyzeYouTube } from "../services/youtube";
 
 export default function PracticePage() {
   const [url, setUrl] = useState("");
-  const [result, setResult] = useState("");
+  const [result, setResult] = useState<AnalysisResult | null >(null);
 
   const handleAnalyze = async () => {
     const data = await analyzeYouTube(url);
-    setResult(data.result);
+      console.log(data, "data")
+    setResult(data);
   };
 
   return (
@@ -33,7 +36,7 @@ export default function PracticePage() {
 
       {result && (
         <pre className="bg-gray-100 p-4 rounded whitespace-pre-wrap">
-          {result}
+          {JSON.stringify(result, null, 2)}
         </pre>
       )}
     </section>
