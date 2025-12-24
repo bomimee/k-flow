@@ -3,6 +3,7 @@ import Button from "./Button";
 type InputProps = {
   link: string;
   value: string;
+  text: string;
   onChange: (value: string) => void;
   onAnalyze: () => void;
 };
@@ -10,6 +11,7 @@ type InputProps = {
 export default function Input({
   link,
   value,
+  text,
   onChange,
   onAnalyze,
 }: InputProps) {
@@ -24,7 +26,7 @@ export default function Input({
         placeholder="link here"
       />
 
-      <Button link={link} onClick={onAnalyze} />
+      <Button link={link} onClick={onAnalyze} text={text}/>
     </div>
   );
 }

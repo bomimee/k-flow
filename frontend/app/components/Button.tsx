@@ -11,10 +11,10 @@ export default function Button({ link, text, onClick }: ButtonProps) {
     return (
       <Link
         href={`/${link}`}
-        className="w-14 h-14 flex items-center justify-center
-                   bg-[var(--lemon)] rounded-full shrink-0"
+        className="w-20 h-20 flex items-center justify-center text-black
+                   bg-[var(--lemon)] rounded-full shrink-0 hover:bg-[var(--font)]"
       >
-        →
+        {text}
       </Link>
     );
   }
@@ -23,8 +23,8 @@ export default function Button({ link, text, onClick }: ButtonProps) {
     <button
       type="button"
       onClick={onClick}
-      className="w-14 h-14 flex items-center justify-center
-                 bg-[var(--lemon)] rounded-full shrink-0 hover:bg-[var(--font)]"
+      className="w-20 h-20 flex items-center justify-center
+                 bg-[var(--lemon)] rounded-full shrink-0 hover:bg-[var(--font)] text-black"
     >
       {text}
     </button>
