@@ -18,9 +18,6 @@ export default function Header() {
           <Link href="/practice" className="hover:underline">
             Practice
           </Link>
-          <Link href="/practice" className="hover:underline">
-            Practice
-          </Link>
           <Link href="/level" className="hover:underline">
             Level
           </Link>
