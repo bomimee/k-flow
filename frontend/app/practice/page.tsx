@@ -83,16 +83,16 @@ export default function PracticePage() {
     <>
       <Header />
       <section className="space-y-6 max-w-xl mx-auto">
-        <h2 className="text-2xl font-bold text-black mt-30">please provide a youtube link</h2>
+        <h2 className="text-2xl font-bold text-black mt-30">please provide a youtube link below ⬇</h2>
         <Input
           link=""
+          text="Go"
           value={url}
           onChange={setUrl}
           onAnalyze={handleAnalyze}
         />
         {result && <ResultResponse result={result} />}
       </section>
-      <Footer />
     </>
   );
 }
