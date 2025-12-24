@@ -83,8 +83,13 @@ export default function PracticePage() {
     <>
       <Header />
       <section className="space-y-6 max-w-xl mx-auto">
-        <h2 className="text-2xl font-bold">YouTube Korean Analyzer</h2>
-        <Input link=""/>
+        <h2 className="text-2xl font-bold text-black mt-30">please provide a youtube link</h2>
+        <Input
+          link=""
+          value={url}
+          onChange={setUrl}
+          onAnalyze={handleAnalyze}
+        />
         {result && <ResultResponse result={result} />}
       </section>
       <Footer />
