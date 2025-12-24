@@ -16,7 +16,7 @@ export default function Guide() {
         <div className="flex flex-col gap-6">
           <ul className="flex flex-col gap-4">
             <li className="bg-[var(--lemon)] rounded-xl px-6 py-4 text-black shadow-sm hover:bg-[var(--font)]">
-              Learn Korean through YouTube videos you love
+              Learn Korean through K-contents you love
             </li>
             <li className="bg-[var(--lemon)] rounded-xl px-6 py-4 text-black shadow-sm hover:bg-[var(--font)]">
               Just paste the YouTube link to get started.
