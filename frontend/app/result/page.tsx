@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 import { analyzeYouTube } from "@/app/services/youtube";
 import type { AnalysisResult } from "@/app/types/analysis";
 import Header from "../components/Header";
-
+import LearninPoint from "../components/LearningPoint";
+import AnalysisSection from "../components/AnalysisSection";
 
 const DATA = {
   video_id: "n19R1Uv9YHY",
@@ -75,16 +76,36 @@ export default function Result() {
   const url = searchParams.get("url");
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [flippedStates, setFlippedStates] = useState<boolean[]>([]);
+  const [activeSection, setActiveSection] = useState<string>("Key Expressions");
+
+  const toggleFlip = (index: number) => {
+    setFlippedStates((prev) => {
+      const newStates = [...prev];
+      newStates[index] = !newStates[index];
+      return newStates;
+    });
+  };
+  useEffect(() => {
+    // Result 페이지에서만 배경색 변경
+    document.body.classList.add("bg-result");
+
+    // 페이지를 떠날 때 원래 상태로 복구
+    return () => {
+      document.body.classList.remove("bg-result");
+    };
+  }, []);
 
   useEffect(() => {
     if (!url) return;
 
     const run = async () => {
-      setLoading(true)
+      setLoading(true);
       // const data = await analyzeYouTube(url);
       // setResult(data);
-      setResult(DATA)
+      setResult(DATA);
       setLoading(false);
+      setFlippedStates(result?.analysis.grammar_points.map(() => false) || []);
     };
 
     run();
@@ -96,63 +117,56 @@ export default function Result() {
   return (
     <>
       <Header />
-      <div className="space-y-8 text-black">
-        <div className="rounded-lg p-4 bg-[var(--lemon)] shadow">
-          <p className="text-sm text-black-500">YouTube Analysis</p>
-          <p className="font-semibold">Video ID: {result.video_id}</p>
-
-          <span className="inline-block mt-2 px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
-            {result.source}
-          </span>
+      <div className="space-y-8 text-center">
+        <h1 className="font-bold text-3xl text-[var(--brown)]">
+          Video Title: 유투브 제목넣기
+        </h1>
+        <span className="inline-block mt-2 px-2 py-1 text-xs bg-green-100 text-green-700 rounded">
+          {result.source}
+        </span>
+        <div className="flex justify-center items-center gap-4 mt-10">
+          <LearninPoint
+            title="Key Expressions"
+            active={activeSection === "Key Expressions"}
+            onClick={() => setActiveSection("Key Expressions")}
+          />
+          <LearninPoint
+            title="Grammar Points"
+            active={activeSection === "Grammar Points"}
+            onClick={() => setActiveSection("Grammar Points")}
+          />
+          <LearninPoint
+            title="Practice"
+            active={activeSection === "Practice"}
+            onClick={() => setActiveSection("Practice")}
+          />
         </div>
 
-        {/* Key Expressions */}
-        <section>
-          <h3 className="text-xl font-bold mb-4">📌 Key Expressions</h3>
-          <div className="space-y-3">
-            {result.analysis.key_expressions.map((item, idx) => (
-              <div
-                key={idx}
-                className="rounded-lg p-4 hover:bg-gray-100 transition bg-[var(--lemon)]"
-              >
-                <p className="text-lg font-semibold">{item.expression}</p>
-                <p className="text-sm text-gray-600">{item.meaning_en}</p>
-                <p className="mt-2 text-sm text-blue-600">
-                  💡 {item.usage_note}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {activeSection === "Key Expressions" && (
+          <AnalysisSection
+            title="Key Expressions"
+            items={result.analysis.key_expressions}
+            type="key_expression"
+          />
+        )}
 
-        {/* Grammar */}
-        <section>
-          <h3 className="text-xl font-bold mb-4">🧩 Grammar Points</h3>
-          <div className="space-y-3">
-            {result.analysis.grammar_points.map((g, idx) => (
-              <div key={idx} className="rounded-lg p-4 bg-[var(--lemon)]">
-                <p className="font-semibold text-purple-700">{g.pattern}</p>
-                <p className="text-sm text-gray-700 mt-1">{g.explanation_en}</p>
-                <p className="mt-2 text-sm bg-purple-50 p-2 rounded">
-                  📘 {g.example_sentence}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {activeSection === "Grammar Points" && (
+          <AnalysisSection
+            title="Grammar Points"
+            items={result.analysis.grammar_points}
+            type="grammar_point"
+            flippedStates={flippedStates}
+            onToggleFlip={toggleFlip}
+          />
+        )}
 
-        {/* Practice */}
-        <section>
-          <h3 className="text-xl font-bold mb-4">✍️ Practice</h3>
-          <div className="space-y-3">
-            {result.analysis.practice_sentences.map((p, idx) => (
-              <div key={idx} className="rounded-lg p-4 bg-[var(--lemon)]">
-                <p className="text-lg">{p.korean}</p>
-                <p className="text-sm text-gray-500 mt-1">{p.english}</p>
-              </div>
-            ))}
-          </div>
-        </section>
+        {activeSection === "Practice" && (
+          <AnalysisSection
+            title="Practice"
+            items={result.analysis.practice_sentences}
+            type="practice"
+          />
+        )}
       </div>
     </>
   );

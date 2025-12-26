@@ -2,7 +2,9 @@
 
 :root {
   --background: #427EA9;
-  --foreground: #171717;
+  --lightblue: #6399B2;
+  --lightbeige: #AA927B;
+  --brown: #4D2A1A;
   --font: #F9F8EE;
   --lemon: #EFF889;
 }
@@ -25,4 +27,8 @@ body {
   background: var(--background);
   color: var(--font);
   font-family: var(--font-montserrat);
+}
+
+.bg-result {
+  background-color: var(--font);; /* 원하는 색상 */
 }
