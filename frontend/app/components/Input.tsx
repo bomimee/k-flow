@@ -1,19 +1,12 @@
-import Button from "./Button";
-
 type InputProps = {
-  link?: string;
   value?: string;
   text?: string;
   onChange: (value: string) => void;
-  onAnalyze: () => void;
 };
 
 export default function Input({
-  link,
   value,
-  text,
   onChange,
-  onAnalyze
 }: InputProps) {
   return (
     <div className="mt-10 flex items-center gap-4 justify-center">
@@ -26,7 +19,7 @@ export default function Input({
         placeholder="link here"
       />
 
-      <Button link={link} text={text} onClick={onAnalyze}/>
+     
     </div>
   );
 }

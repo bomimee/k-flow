@@ -74,6 +74,8 @@ const DATA = {
 export default function Result() {
   const searchParams = useSearchParams();
   const url = searchParams.get("url");
+  const level = searchParams.get("level") || "beginner";
+
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [flippedStates, setFlippedStates] = useState<boolean[]>([]);
@@ -97,19 +99,20 @@ export default function Result() {
   }, []);
 
   useEffect(() => {
-    if (!url) return;
+    if (!url || !level) return;
 
     const run = async () => {
       setLoading(true);
-      // const data = await analyzeYouTube(url);
-      // setResult(data);
-      setResult(DATA);
+      const data = await analyzeYouTube(url, level);
+      setResult(data);
+      console.log(result)
+      // setResult(DATA);
       setLoading(false);
       setFlippedStates(result?.analysis.grammar_points.map(() => false) || []);
     };
 
     run();
-  }, [url]);
+  }, [url, level]);
 
   if (loading) return <p>Analyzing...</p>;
   if (!result) return <p>No result</p>;

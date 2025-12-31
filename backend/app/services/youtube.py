@@ -19,6 +19,7 @@ def extract_video_id(url: str) -> str:
             return match.group(1)
 
     raise ValueError("Invalid YouTube URL format")
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
 def get_korean_transcript(video_id: str) -> str:
     try:
@@ -36,6 +37,7 @@ def get_korean_transcript(video_id: str) -> str:
     except Exception as e:
         print("❌ 자막 가져오기 실패:", e)
         return ""
+
     
 
 def download_audio(video_url: str) -> str:

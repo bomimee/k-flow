@@ -8,11 +8,14 @@ router = APIRouter()
 
 @router.post("/analyze-youtube")
 def analyze_youtube(req: YouTubeRequest):
+    print("✅ req 분석 결과:", req)
     video_id = extract_video_id(req.url)
     transcript = get_korean_transcript(video_id)
 
+    print(transcript)
+    print("자막")
+
     if not transcript:
-        print("❌ 자막 없음")
         audio_file = download_audio(req.url)
 
         if not os.path.exists(audio_file):
@@ -28,7 +31,7 @@ def analyze_youtube(req: YouTubeRequest):
             if os.path.exists(audio_file):
                 os.remove(audio_file)
 
-    analysis = analyze_transcript_with_llm(transcript)
+    analysis = analyze_transcript_with_llm(transcript, req.level)
     print("✅ LLM 분석 결과:", analysis)
 
     return {
