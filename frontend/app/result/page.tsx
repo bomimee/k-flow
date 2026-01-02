@@ -3,10 +3,56 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-// import { analyzeYouTube } from "@/app/services/youtube";
+import { analyzeYouTube } from "@/app/services/youtube";
 import type { AnalysisResult } from "@/app/types/analysis";
 import Header from "../components/Header";
 import ResultResponse from "../components/Result";
+
+
+export default function Result() {
+  const searchParams = useSearchParams();
+  const url = searchParams.get("url");
+  const level = searchParams.get("level") || "beginner";
+
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.body.classList.add("bg-result");
+    return () => {
+      document.body.classList.remove("bg-result");
+    };
+  }, []);
+
+  useEffect(() => {
+  if (!url || !level) return;
+
+  const run = async () => {
+    try {
+      setLoading(true);
+      const data = await analyzeYouTube(url, level);
+      setResult(data);
+    } catch (err) {
+      console.error("❌ analyzeYouTube failed:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  run();
+}, [url, level]);
+
+  if (loading) return <p>Analyzing...</p>;
+  if (!result) return <p>No result</p>;
+
+  return (
+    <>
+      <Header />
+        <ResultResponse result={result}/>
+    </>
+  );
+}
+
 
 const DATA: AnalysisResult = {
   video_id: "dummy-video-id",
@@ -223,47 +269,3 @@ const DATA: AnalysisResult = {
   },
 }
 };
-
-
-export default function Result() {
-  const searchParams = useSearchParams();
-  const url = searchParams.get("url");
-  const level = searchParams.get("level") || "beginner";
-
-  const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Result 페이지에서만 배경색 변경
-    document.body.classList.add("bg-result");
-
-    // 페이지를 떠날 때 원래 상태로 복구
-    return () => {
-      document.body.classList.remove("bg-result");
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!url || !level) return;
-
-    const run = async () => {
-      setLoading(true);
-      // const data = await analyzeYouTube(url, level);
-      // setResult(data);
-      setResult(DATA);
-      setLoading(false);
-    };
-
-    run();
-  }, [url, level]);
-
-  if (loading) return <p>Analyzing...</p>;
-  if (!result) return <p>No result</p>;
-
-  return (
-    <>
-      <Header />
-        <ResultResponse result={result}/>
-    </>
-  );
-}

@@ -172,3 +172,31 @@ export type UserLevel = 'beginner' | 'intermediate' | 'advanced';
 
 // Video type
 export type VideoType = 'cooking show' | 'variety' | 'vlog' | 'interview' | 'drama' | 'news' | 'other';
+
+export interface AudioTimestamp {
+  start: number; // 초 단위
+  end: number;
+  text: string;
+}
+
+export interface KeyExpression {
+  expression: string;
+  pronunciation: string;
+  pronunciation_notes: string;
+  meaning_en: string;
+  formality: 'formal' | 'casual' | 'neutral';
+  usage_context: string;
+  similar_expressions: string[];
+  example_in_context: string;
+  // 👇 오디오 관련 필드 추가
+  audio_timestamp?: AudioTimestamp; // 유튜브 영상에서의 위치
+  audio_clip_url?: string; // 추출된 오디오 클립 URL
+}
+
+export interface AnalysisResult {
+  video_id: string;
+  source: string;
+  youtube_url?: string; // 👈 유튜브 URL 추가
+  audio_file_url?: string; // 👈 추출된 전체 오디오 파일 URL 추가
+  analysis: Analysis;
+}

@@ -78,22 +78,3 @@ def extract_json(text: str) -> str | None:
 
     return text[start:end+1]
 
-# def speech_to_text(audio_path: str) -> str:
-#     try:
-#         print("🎧 STT 시작, 파일:", audio_path)
-
-#         with open(audio_path, "rb") as f:
-#             transcript = client.audio.transcriptions.create(
-#                 model="gpt-4o-transcribe",
-#                 file=f,
-#                 language="ko"
-#             )
-
-#         print("✅ STT 성공")
-#         return transcript.text
-
-#     except Exception as e:
-#         print("❌ STT 실패:", e)
-#         return ""
-
-
