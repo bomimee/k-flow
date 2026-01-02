@@ -37,6 +37,7 @@ export default function AnalysisSection<T>({
       title={title}
       index={idx}
       expression={type === "key_expression" ? (item as any).expression : undefined}
+      pronunciation={type === "key_expression" ? (item as any).pronunciation : undefined}
       meaning={type === "key_expression" ? (item as any).meaning_en : undefined}
       usage_note={type === "key_expression" ? (item as any).usage_note : undefined}
       pattern={type === "grammar_point" ? (item as any).pattern : undefined}

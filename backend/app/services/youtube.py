@@ -1,4 +1,5 @@
 from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import NoTranscriptFound
 from fastapi import HTTPException
 import re
 import yt_dlp
@@ -19,24 +20,18 @@ def extract_video_id(url: str) -> str:
             return match.group(1)
 
     raise ValueError("Invalid YouTube URL format")
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
-def get_korean_transcript(video_id: str) -> str:
+
+def get_korean_transcript(video_id: str):
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-
-        # 1️⃣ 수동 자막 우선
-        if transcript_list.find_manually_created_transcript(["ko", "en"]):
-            transcript = transcript_list.find_manually_created_transcript(["ko", "en"])
-        else:
-            # 2️⃣ 자동 생성 자막 fallback
-            transcript = transcript_list.find_generated_transcript(["ko", "en"])
-
-        return " ".join(item["text"] for item in transcript.fetch())
-
+        api = YouTubeTranscriptApi()
+        transcript = api.get_transcript(video_id, languages=["ko"])
+        return " ".join([t["text"] for t in transcript])
+    except NoTranscriptFound:
+        return None
     except Exception as e:
-        print("❌ 자막 가져오기 실패:", e)
-        return ""
+        print("❌ Transcript error:", e)
+        return None
 
     
 

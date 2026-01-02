@@ -7,6 +7,7 @@ type AnalysisCardProps = {
   usage_note?: string;
   pattern?: string;
   explanation?: string;
+  pronunciation?:string;
   example_sentence?: string;
   flipable?: boolean; // 문법 카드처럼 뒤집기 가능 여부
   flipped?: boolean;
@@ -17,6 +18,7 @@ export default function AnalysisCard({
   title,
   index,
   expression,
+  pronunciation,
   meaning,
   usage_note,
   pattern,
@@ -39,9 +41,14 @@ export default function AnalysisCard({
             {title} {index + 1}.
           </p>
           {expression && (
+            <>
             <p className="flex-1 flex items-center justify-center text-xl font-bold text-[var(--background)]">
               {expression}
             </p>
+            <p className="flex-1 flex items-center justify-center text-xl font-bold text-[var(--background)]">
+              {pronunciation}
+            </p>
+            </>
           )}
           {pattern && (
             <p className="flex-1 flex items-center justify-center text-xl font-bold text-[var(--background)]">
