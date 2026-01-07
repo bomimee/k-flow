@@ -9,6 +9,7 @@ from app.services.youtube import (
 from app.services.llm import analyze_transcript_with_llm, speech_to_text
 from app.schemas.youtube import YouTubeRequest
 import os
+from yt_dlp.utils import DownloadError
 
 router = APIRouter()
 
@@ -31,24 +32,38 @@ def analyze_youtube(req: YouTubeRequest):
     # 2️⃣ 자막 없으면 STT
     if not transcript:
         print("⚠️ 자막 없음 → STT 진행")
-        audio_file = download_audio(req.url)
-        
-        if not os.path.exists(audio_file):
-            raise HTTPException(status_code=500, detail="오디오 다운로드 실패")
+
+        try:
+            audio_file = download_audio(req.url)
+        except DownloadError as e:
+            print("❌ yt-dlp 다운로드 실패:", e)
+            raise HTTPException(
+                status_code=403,
+                detail="YouTube 오디오 다운로드가 차단되었습니다 (403)"
+            )
+        except Exception as e:
+            print("❌ 오디오 다운로드 예외:", e)
+            raise HTTPException(
+                status_code=500,
+                detail="오디오 다운로드 중 오류 발생"
+            )
+
+        if not audio_file or not os.path.exists(audio_file):
+            raise HTTPException(status_code=500, detail="오디오 파일 생성 실패")
 
         try:
             transcript = speech_to_text(audio_file)
             if not transcript:
                 raise HTTPException(status_code=500, detail="음성 인식(STT) 실패")
+
             source = "speech"
             print("✅ STT 사용")
-            # ⚠️ 여기서는 audio_file을 삭제하지 않음 (나중에 클립 추출에 사용)
+
         except Exception as e:
             print("❌ STT ERROR:", e)
-            # STT 실패 시에만 오디오 파일 삭제
             if audio_file and os.path.exists(audio_file):
                 os.remove(audio_file)
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail="STT 처리 실패")
 
     # 3️⃣ LLM 분석
     try:
