@@ -128,12 +128,6 @@ export default function HomePage() {
               >
                 Start Free Assessment
               </Link>
-              <Link
-                href="/about"
-                className="btn-outline text-lg px-8 py-4 border-white text-white hover:bg-white hover:text-primary"
-              >
-                Learn More
-              </Link>
             </div>
           </div>
         </div>

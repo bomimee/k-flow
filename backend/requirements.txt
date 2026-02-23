@@ -7,3 +7,4 @@ python-dotenv
 yt-dlp
 whisper
 pydub
+supabase

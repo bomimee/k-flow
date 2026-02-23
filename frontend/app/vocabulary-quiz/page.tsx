@@ -11,7 +11,8 @@ export default function VocabularyQuizPage() {
     mode: 'learning' as const,
     questionCount: 10,
     difficulty: 'mixed' as const,
-    categories: ['all']
+    categories: ['all'],
+    level: 1
   });
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
 
@@ -33,7 +34,7 @@ export default function VocabularyQuizPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -60,12 +61,11 @@ export default function VocabularyQuizPage() {
                   ].map((mode) => (
                     <button
                       key={mode.value}
-                      onClick={() => setQuizConfig({...quizConfig, mode: mode.value as any})}
-                      className={`p-4 rounded-lg border-2 text-left transition-all ${
-                        quizConfig.mode === mode.value
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      onClick={() => setQuizConfig({ ...quizConfig, mode: mode.value as any })}
+                      className={`p-4 rounded-lg border-2 text-left transition-all ${quizConfig.mode === mode.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       <div className="font-semibold">{mode.label}</div>
                       <div className="text-sm text-gray-600">{mode.desc}</div>
@@ -83,12 +83,11 @@ export default function VocabularyQuizPage() {
                   {[5, 10, 15, 20].map((count) => (
                     <button
                       key={count}
-                      onClick={() => setQuizConfig({...quizConfig, questionCount: count})}
-                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${
-                        quizConfig.questionCount === count
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      onClick={() => setQuizConfig({ ...quizConfig, questionCount: count })}
+                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${quizConfig.questionCount === count
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       {count}
                     </button>
@@ -110,12 +109,11 @@ export default function VocabularyQuizPage() {
                   ].map((level) => (
                     <button
                       key={level.value}
-                      onClick={() => setQuizConfig({...quizConfig, difficulty: level.value as any})}
-                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${
-                        quizConfig.difficulty === level.value
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      onClick={() => setQuizConfig({ ...quizConfig, difficulty: level.value as any })}
+                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${quizConfig.difficulty === level.value
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       {level.label}
                     </button>
@@ -141,23 +139,43 @@ export default function VocabularyQuizPage() {
                       key={category.value}
                       onClick={() => {
                         if (category.value === 'all') {
-                          setQuizConfig({...quizConfig, categories: ['all']});
+                          setQuizConfig({ ...quizConfig, categories: ['all'] });
                         } else {
                           const newCategories = quizConfig.categories.includes('all')
                             ? [category.value]
                             : quizConfig.categories.includes(category.value)
-                            ? quizConfig.categories.filter(c => c !== category.value)
-                            : [...quizConfig.categories, category.value];
-                          setQuizConfig({...quizConfig, categories: newCategories});
+                              ? quizConfig.categories.filter(c => c !== category.value)
+                              : [...quizConfig.categories, category.value];
+                          setQuizConfig({ ...quizConfig, categories: newCategories });
                         }
                       }}
-                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${
-                        quizConfig.categories.includes(category.value)
-                          ? 'border-primary bg-primary/10'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${quizConfig.categories.includes(category.value)
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
                     >
                       {category.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* TTMIK Level */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  TTMIK Level
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((level) => (
+                    <button
+                      key={level}
+                      onClick={() => setQuizConfig({ ...quizConfig, level: level as any })}
+                      className={`p-2 rounded-lg border-2 font-semibold transition-all ${(quizConfig as any).level === level
+                        ? 'border-primary bg-primary/10'
+                        : 'border-gray-200 hover:border-gray-300'
+                        }`}
+                    >
+                      {level}
                     </button>
                   ))}
                 </div>
@@ -191,7 +209,7 @@ export default function VocabularyQuizPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
             <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -260,15 +278,16 @@ export default function VocabularyQuizPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <ModernNavigation />
-      
+
       <main className="max-w-4xl mx-auto px-6 py-12">
         <VocabularyQuiz
           mode={quizConfig.mode}
           config={{
+            mode: quizConfig.mode,
             questionCount: quizConfig.questionCount,
             difficulty: quizConfig.difficulty,
             categories: quizConfig.categories,
-            levelRange: [1, 10]
+            levelRange: [quizConfig.level, quizConfig.level]
           }}
           onQuizComplete={handleQuizComplete}
         />

@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { 
-  VocabularyItem, 
-  QuizQuestion, 
-  QuizSession, 
-  QuizAnswer, 
+import type {
+  VocabularyItem,
+  QuizQuestion,
+  QuizSession,
+  QuizAnswer,
   QuizResult,
   QuizMode,
-  QuizModeConfig 
+  QuizModeConfig
 } from '@/app/types/vocabulary';
+import { fetchVocabulary } from '@/app/services/vocabulary';
 
 interface VocabularyQuizProps {
   mode: QuizMode;
@@ -23,77 +24,34 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
   const [timeLeft, setTimeLeft] = useState<number>(0);
   const [isTimerActive, setIsTimerActive] = useState(false);
   const [questionStartTime, setQuestionStartTime] = useState<number>(0);
-
-  // Sample vocabulary data - in real app, this would come from API
-  const sampleVocabulary: VocabularyItem[] = [
-    {
-      id: '1',
-      korean: '사랑',
-      hanja: '愛',
-      meaning: 'love',
-      pronunciation: 'sarang',
-      level: 1,
-      exampleSentence: '나는 너를 사랑해요.',
-      exampleTranslation: 'I love you.',
-      wordRoot: '사랑하다',
-      relatedWords: ['애정', '연애', '우정'],
-      difficulty: 'easy',
-      category: 'emotions',
-      srsData: {
-        interval: 1,
-        repetitions: 0,
-        easeFactor: 2.5,
-        nextReview: new Date(),
-        successRate: 0
-      }
-    },
-    {
-      id: '2',
-      korean: '공부',
-      hanja: '工夫',
-      meaning: 'study',
-      pronunciation: 'gongbu',
-      level: 1,
-      exampleSentence: '저는 한국어를 공부해요.',
-      exampleTranslation: 'I study Korean.',
-      wordRoot: '공부하다',
-      relatedWords: ['학습', '연구', '교육'],
-      difficulty: 'easy',
-      category: 'education',
-      srsData: {
-        interval: 1,
-        repetitions: 0,
-        easeFactor: 2.5,
-        nextReview: new Date(),
-        successRate: 0
-      }
-    },
-    {
-      id: '3',
-      korean: '행복',
-      hanja: '幸福',
-      meaning: 'happiness',
-      pronunciation: 'haengbok',
-      level: 2,
-      exampleSentence: '저는 행복해요.',
-      exampleTranslation: 'I am happy.',
-      wordRoot: '행복하다',
-      relatedWords: ['기쁨', '즐거움', '만족'],
-      difficulty: 'medium',
-      category: 'emotions',
-      srsData: {
-        interval: 1,
-        repetitions: 0,
-        easeFactor: 2.5,
-        nextReview: new Date(),
-        successRate: 0
-      }
-    }
-  ];
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
 
   useEffect(() => {
-    initializeQuiz();
-  }, []);
+    async function loadQuiz() {
+      try {
+        setIsLoading(true);
+        // We use the level from config if available, otherwise default to level 1 for now
+        const level = config.levelRange ? config.levelRange[0] : 1;
+        const fetchedVocab = await fetchVocabulary(level, config.categories, config.questionCount);
+
+        if (fetchedVocab.length === 0) {
+          throw new Error('No vocabulary found for this level.');
+        }
+
+        setVocabulary(fetchedVocab);
+        initializeQuiz(fetchedVocab);
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Failed to load quiz:', err);
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        setIsLoading(false);
+      }
+    }
+
+    loadQuiz();
+  }, [mode, config]);
 
   useEffect(() => {
     if (isTimerActive && timeLeft > 0) {
@@ -104,8 +62,8 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
     }
   }, [timeLeft, isTimerActive]);
 
-  const initializeQuiz = () => {
-    const questions = generateQuestions();
+  const initializeQuiz = (vocabData: VocabularyItem[]) => {
+    const questions = generateQuestions(vocabData);
     const newSession: QuizSession = {
       id: Date.now().toString(),
       questions,
@@ -117,7 +75,7 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       streak: 0,
       bestStreak: 0
     };
-    
+
     setSession(newSession);
     setCurrentQuestion(questions[0]);
     setTimeLeft(config.timeLimit || 30);
@@ -125,52 +83,52 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
     setQuestionStartTime(Date.now());
   };
 
-  const generateQuestions = (): QuizQuestion[] => {
+  const generateQuestions = (vocabData: VocabularyItem[]): QuizQuestion[] => {
     const questions: QuizQuestion[] = [];
-    const shuffledVocab = [...sampleVocabulary].sort(() => Math.random() - 0.5);
-    
+    const shuffledVocab = [...vocabData].sort(() => Math.random() - 0.5);
+
     for (let i = 0; i < Math.min(config.questionCount, shuffledVocab.length); i++) {
       const vocab = shuffledVocab[i];
-      const questionType = getRandomQuestionType();
-      questions.push(createQuestion(vocab, questionType));
+      const questionType = getRandomQuestionType(vocab);
+      questions.push(createQuestion(vocab, questionType, vocabData));
     }
-    
+
     return questions;
   };
 
-  const getRandomQuestionType = (): QuizQuestion['type'] => {
-    const types: QuizQuestion['type'][] = ['multiple-choice', 'sentence-fill', 'hanja-match', 'pronunciation'];
-    return types[Math.floor(Math.random() * types.length)];
+  const getRandomQuestionType = (vocab: VocabularyItem): QuizQuestion['type'] => {
+    const availableTypes: QuizQuestion['type'][] = ['multiple-choice'];
+    // Only add sentence-fill if an example sentence exists
+    if (vocab.exampleSentence) {
+      availableTypes.push('sentence-fill');
+    }
+    return availableTypes[Math.floor(Math.random() * availableTypes.length)];
   };
 
-  const createQuestion = (vocab: VocabularyItem, type: QuizQuestion['type']): QuizQuestion => {
+  const createQuestion = (vocab: VocabularyItem, type: QuizQuestion['type'], allVocab: VocabularyItem[]): QuizQuestion => {
     switch (type) {
       case 'multiple-choice':
-        return createMultipleChoiceQuestion(vocab);
+        return createMultipleChoiceQuestion(vocab, allVocab);
       case 'sentence-fill':
         return createSentenceFillQuestion(vocab);
-      case 'hanja-match':
-        return createHanjaMatchQuestion(vocab);
-      case 'pronunciation':
-        return createPronunciationQuestion(vocab);
       default:
-        return createMultipleChoiceQuestion(vocab);
+        return createMultipleChoiceQuestion(vocab, allVocab);
     }
   };
 
-  const createMultipleChoiceQuestion = (vocab: VocabularyItem): QuizQuestion => {
+  const createMultipleChoiceQuestion = (vocab: VocabularyItem, allVocab: VocabularyItem[]): QuizQuestion => {
     const options = [vocab.meaning];
-    const otherVocabs = sampleVocabulary.filter(v => v.id !== vocab.id);
-    
-    while (options.length < 4) {
+    const otherVocabs = allVocab.filter(v => v.id !== vocab.id);
+
+    while (options.length < 4 && otherVocabs.length > options.length - 1) {
       const randomVocab = otherVocabs[Math.floor(Math.random() * otherVocabs.length)];
       if (!options.includes(randomVocab.meaning)) {
         options.push(randomVocab.meaning);
       }
     }
-    
+
     options.sort(() => Math.random() - 0.5);
-    
+
     return {
       id: `mc-${vocab.id}`,
       type: 'multiple-choice',
@@ -178,15 +136,16 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       question: `What does "${vocab.korean}" mean?`,
       options,
       correctAnswer: vocab.meaning,
-      explanation: `"${vocab.korean}" means "${vocab.meaning}". ${vocab.hanja ? `Hanja: ${vocab.hanja}` : ''}`,
+      explanation: `"${vocab.korean}" means "${vocab.meaning}".`,
       points: vocab.difficulty === 'easy' ? 10 : vocab.difficulty === 'medium' ? 20 : 30,
       timeLimit: 20
     };
   };
 
   const createSentenceFillQuestion = (vocab: VocabularyItem): QuizQuestion => {
-    const sentence = vocab.exampleSentence.replace(vocab.korean, '___');
-    
+    const exampleSentence = vocab.exampleSentence || '';
+    const sentence = exampleSentence.replace(vocab.korean, '___');
+
     return {
       id: `sf-${vocab.id}`,
       type: 'sentence-fill',
@@ -199,69 +158,13 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
     };
   };
 
-  const createHanjaMatchQuestion = (vocab: VocabularyItem): QuizQuestion => {
-    if (!vocab.hanja) {
-      return createMultipleChoiceQuestion(vocab);
-    }
-    
-    const options = [vocab.hanja];
-    const otherVocabs = sampleVocabulary.filter(v => v.id !== vocab.id && v.hanja);
-    
-    while (options.length < 4 && otherVocabs.length > 0) {
-      const randomVocab = otherVocabs[Math.floor(Math.random() * otherVocabs.length)];
-      if (randomVocab.hanja && !options.includes(randomVocab.hanja)) {
-        options.push(randomVocab.hanja);
-      }
-    }
-    
-    options.sort(() => Math.random() - 0.5);
-    
-    return {
-      id: `hj-${vocab.id}`,
-      type: 'hanja-match',
-      vocabulary: vocab,
-      question: `What is the Hanja for "${vocab.korean}" (${vocab.meaning})?`,
-      options,
-      correctAnswer: vocab.hanja,
-      explanation: `The Hanja for "${vocab.korean}" is "${vocab.hanja}". This helps understand the word's origin and meaning.`,
-      points: 25,
-      timeLimit: 20
-    };
-  };
-
-  const createPronunciationQuestion = (vocab: VocabularyItem): QuizQuestion => {
-    const options = [vocab.pronunciation];
-    const otherVocabs = sampleVocabulary.filter(v => v.id !== vocab.id);
-    
-    while (options.length < 4) {
-      const randomVocab = otherVocabs[Math.floor(Math.random() * otherVocabs.length)];
-      if (!options.includes(randomVocab.pronunciation)) {
-        options.push(randomVocab.pronunciation);
-      }
-    }
-    
-    options.sort(() => Math.random() - 0.5);
-    
-    return {
-      id: `pr-${vocab.id}`,
-      type: 'pronunciation',
-      vocabulary: vocab,
-      question: `How do you pronounce "${vocab.korean}"?`,
-      options,
-      correctAnswer: vocab.pronunciation,
-      explanation: `"${vocab.korean}" is pronounced "${vocab.pronunciation}". Listen carefully to the native pronunciation.`,
-      points: 15,
-      timeLimit: 15
-    };
-  };
-
   const handleAnswer = () => {
     if (!session || !currentQuestion || !selectedAnswer) return;
-    
+
     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
     const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     const points = isCorrect ? currentQuestion.points : 0;
-    
+
     const answer: QuizAnswer = {
       questionId: currentQuestion.id,
       userAnswer: selectedAnswer,
@@ -270,37 +173,47 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       timeSpent,
       points
     };
-    
+
     const newAnswers = [...session.answers, answer];
     const newStreak = isCorrect ? session.streak + 1 : 0;
     const newBestStreak = Math.max(newStreak, session.bestStreak);
-    
+
     const updatedSession = {
       ...session,
       answers: newAnswers,
-      currentQuestion: session.currentQuestion + 1,
       score: session.score + (isCorrect ? 1 : 0),
       totalPoints: session.totalPoints + points,
       streak: newStreak,
       bestStreak: newBestStreak
     };
-    
+
     setSession(updatedSession);
     setShowResult(true);
     setIsTimerActive(false);
-    
-    // Move to next question after showing result
-    setTimeout(() => {
-      if (updatedSession.currentQuestion < session.questions.length) {
-        moveToNextQuestion(updatedSession);
-      } else {
-        completeQuiz(updatedSession);
-      }
-    }, 2000);
+
+    // Manual transition - removed setTimeout
+  };
+
+  const handleNext = () => {
+    if (!session) return;
+
+    const nextIndex = session.currentQuestion + 1;
+    const updatedSession = {
+      ...session,
+      currentQuestion: nextIndex
+    };
+
+    setSession(updatedSession);
+
+    if (nextIndex < session.questions.length) {
+      moveToNextQuestion(updatedSession);
+    } else {
+      completeQuiz(updatedSession);
+    }
   };
 
   const moveToNextQuestion = (updatedSession: QuizSession) => {
-    const nextQuestion = session.questions[updatedSession.currentQuestion];
+    const nextQuestion = updatedSession.questions[updatedSession.currentQuestion];
     setCurrentQuestion(nextQuestion);
     setSelectedAnswer('');
     setShowResult(false);
@@ -325,13 +238,13 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       levelUp: false, // Calculate based on XP
       achievements: [] // Calculate based on performance
     };
-    
+
     onQuizComplete(result);
   };
 
   const handleTimeout = () => {
     if (!session || !currentQuestion) return;
-    
+
     const answer: QuizAnswer = {
       questionId: currentQuestion.id,
       userAnswer: '',
@@ -340,33 +253,52 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       timeSpent: config.timeLimit || 30,
       points: 0
     };
-    
+
     const updatedSession = {
       ...session,
       answers: [...session.answers, answer],
       currentQuestion: session.currentQuestion + 1,
       streak: 0
     };
-    
+
     setSession(updatedSession);
     setShowResult(true);
     setIsTimerActive(false);
-    
-    setTimeout(() => {
-      if (updatedSession.currentQuestion < session.questions.length) {
-        moveToNextQuestion(updatedSession);
-      } else {
-        completeQuiz(updatedSession);
-      }
-    }, 2000);
+
+    // Manual transition - removed setTimeout
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <div className="animate-spin mb-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full"></div>
+        </div>
+        <p className="text-gray-600 font-medium">Fetching vocabulary for your level...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-2xl mx-auto p-8 bg-white rounded-lg shadow-lg text-center">
+        <div className="text-red-500 text-5xl mb-4">⚠️</div>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Failed to Load Quiz</h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn-primary px-6 py-2"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   if (!session || !currentQuestion) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-pulse">
-          <div className="w-16 h-16 border-4 border-[var(--background)] border-t-transparent rounded-full"></div>
-        </div>
+        <p>Initializing session...</p>
       </div>
     );
   }
@@ -403,7 +335,7 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
 
       {/* Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-        <div 
+        <div
           className="bg-[var(--background)] h-2 rounded-full transition-all duration-300"
           style={{ width: `${((session.currentQuestion + 1) / session.questions.length) * 100}%` }}
         ></div>
@@ -418,84 +350,82 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
           </span>
         </div>
 
-        {/* Vocabulary Info */}
-        <div className="bg-gray-50 p-4 rounded-lg mb-4">
-          <div className="flex items-center space-x-4">
-            <span className="text-2xl font-bold text-[var(--background)]">
-              {currentQuestion.vocabulary.korean}
-            </span>
-            {currentQuestion.vocabulary.hanja && (
-              <span className="text-xl text-gray-600">
-                ({currentQuestion.vocabulary.hanja})
-              </span>
-            )}
-            <span className="text-gray-500">
-              [{currentQuestion.vocabulary.pronunciation}]
-            </span>
-          </div>
-        </div>
-
-        {/* Answer Options */}
-        {currentQuestion.type === 'multiple-choice' && currentQuestion.options && (
-          <div className="space-y-3">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => setSelectedAnswer(option)}
-                disabled={showResult}
-                className={`w-full p-4 text-left border-2 rounded-lg transition-all duration-200 ${
-                  showResult
+        {/* Answer Options / Hint Area */}
+        {currentQuestion.type === 'multiple-choice' && (
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-500">
+                  [{currentQuestion.vocabulary.pronunciation}]
+                </span>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {currentQuestion.options?.map((option, index) => (
+                <button
+                  key={index}
+                  onClick={() => setSelectedAnswer(option)}
+                  disabled={showResult}
+                  className={`w-full p-4 text-left border-2 rounded-lg transition-all duration-200 ${showResult
                     ? option === currentQuestion.correctAnswer
                       ? 'border-green-500 bg-green-50'
                       : option === selectedAnswer
-                      ? 'border-red-500 bg-red-50'
-                      : 'border-gray-200 bg-gray-50'
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-gray-200 bg-gray-50'
                     : selectedAnswer === option
-                    ? 'border-[var(--background)] bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <span className="flex items-center">
-                  <span className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center mr-3 text-sm font-semibold">
-                    {String.fromCharCode(65 + index)}
+                      ? 'border-[var(--background)] bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                >
+                  <span className="flex items-center">
+                    <span className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center mr-3 text-sm font-semibold">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    {option}
+                    {showResult && option === currentQuestion.correctAnswer && (
+                      <span className="ml-auto text-green-500">✓</span>
+                    )}
+                    {showResult && option === selectedAnswer && option !== currentQuestion.correctAnswer && (
+                      <span className="ml-auto text-red-500">✗</span>
+                    )}
                   </span>
-                  {option}
-                  {showResult && option === currentQuestion.correctAnswer && (
-                    <span className="ml-auto text-green-500">✓</span>
-                  )}
-                  {showResult && option === selectedAnswer && option !== currentQuestion.correctAnswer && (
-                    <span className="ml-auto text-red-500">✗</span>
-                  )}
-                </span>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Text Input for other question types */}
-        {(currentQuestion.type === 'sentence-fill' || currentQuestion.type === 'hanja-match') && (
+        {currentQuestion.type === 'sentence-fill' && (
           <div className="space-y-4">
-            <input
-              type="text"
-              value={selectedAnswer}
-              onChange={(e) => setSelectedAnswer(e.target.value)}
-              disabled={showResult}
-              placeholder="Type your answer here..."
-              className={`w-full p-4 border-2 rounded-lg text-lg ${
-                showResult
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-500">
+                  [{currentQuestion.vocabulary.meaning}]
+                </span>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={selectedAnswer}
+                onChange={(e) => setSelectedAnswer(e.target.value)}
+                disabled={showResult}
+                placeholder="Type your answer here..."
+                className={`w-full p-4 border-2 rounded-lg text-lg ${showResult
                   ? selectedAnswer === currentQuestion.correctAnswer
                     ? 'border-green-500 bg-green-50'
                     : 'border-red-500 bg-red-50'
                   : 'border-gray-300 focus:border-[var(--background)]'
-              }`}
-            />
-            {showResult && (
-              <div className="text-center">
-                <span className="text-green-600 font-semibold">
-                  Correct: {currentQuestion.correctAnswer}
-                </span>
-              </div>
-            )}
+                  }`}
+              />
+              {showResult && (
+                <div className="text-center">
+                  <span className="text-green-600 font-semibold">
+                    Correct: {currentQuestion.correctAnswer}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -508,15 +438,22 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       )}
 
       {/* Action Button */}
-      {!showResult && (
+      <div className="mt-6">
         <button
-          onClick={handleAnswer}
-          disabled={!selectedAnswer}
-          className="w-full py-3 bg-[var(--background)] text-white rounded-lg font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed hover:bg-[var(--lightblue)] transition-colors duration-200"
+          onClick={showResult ? handleNext : handleAnswer}
+          disabled={!selectedAnswer && !showResult}
+          className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-md ${!selectedAnswer && !showResult
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : showResult
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
+            }`}
         >
-          Submit Answer
+          {showResult
+            ? (session.currentQuestion + 1 === session.questions.length ? "Finish Quiz" : "Next Question")
+            : "Submit Answer"}
         </button>
-      )}
+      </div>
     </div>
   );
 }

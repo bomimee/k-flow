@@ -12,6 +12,7 @@ export interface VocabularyItem {
   relatedWords: string[];
   difficulty: 'easy' | 'medium' | 'hard';
   category: string;
+  partOfSpeech?: string;
   srsData: SRSData;
 }
 

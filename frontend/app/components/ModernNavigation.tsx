@@ -74,12 +74,6 @@ export default function ModernNavigation() {
       icon: '🏆',
       description: 'Track your progress',
       isNew: true
-    },
-    {
-      name: 'About',
-      href: '/about',
-      icon: 'ℹ️',
-      description: 'About K-Flow'
     }
   ];
 
@@ -112,21 +106,19 @@ export default function ModernNavigation() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive(item.href)
+                  className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(item.href)
                       ? 'bg-primary text-white'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <span className="flex items-center space-x-2">
                     <span>{item.icon}</span>
                     <span>{item.name}</span>
                     {item.badge && (
-                      <span className={`absolute -top-1 -right-1 px-2 py-0.5 text-xs rounded-full ${
-                        item.badge === 'NEW' ? 'bg-green-500 text-white' :
-                        item.badge === 'HOT' ? 'bg-red-500 text-white' :
-                        'bg-blue-500 text-white'
-                      }`}>
+                      <span className={`absolute -top-1 -right-1 px-2 py-0.5 text-xs rounded-full ${item.badge === 'NEW' ? 'bg-green-500 text-white' :
+                          item.badge === 'HOT' ? 'bg-red-500 text-white' :
+                            'bg-blue-500 text-white'
+                        }`}>
                         {item.badge}
                       </span>
                     )}
@@ -186,11 +178,10 @@ export default function ModernNavigation() {
                   key={item.name}
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    isActive(item.href)
+                  className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(item.href)
                       ? 'bg-primary text-white'
                       : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -202,11 +193,10 @@ export default function ModernNavigation() {
                     </div>
                     <div className="flex items-center space-x-2">
                       {item.badge && (
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          item.badge === 'NEW' ? 'bg-green-500 text-white' :
-                          item.badge === 'HOT' ? 'bg-red-500 text-white' :
-                          'bg-blue-500 text-white'
-                        }`}>
+                        <span className={`px-2 py-1 text-xs rounded-full ${item.badge === 'NEW' ? 'bg-green-500 text-white' :
+                            item.badge === 'HOT' ? 'bg-red-500 text-white' :
+                              'bg-blue-500 text-white'
+                          }`}>
                           {item.badge}
                         </span>
                       )}
