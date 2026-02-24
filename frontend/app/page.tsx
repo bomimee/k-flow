@@ -98,7 +98,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <ModernNavigation />
-      
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary to-primary-dark text-white">
         <div className="absolute inset-0 bg-black opacity-10"></div>
@@ -110,17 +110,17 @@ export default function HomePage() {
                 <span>Now with AI-powered learning</span>
               </div>
             </div>
-            
+
             <h1 className="text-5xl lg:text-7xl font-bold mb-6 animate-fade-in">
               Master Korean with
               <span className="block text-gradient">K-Flow</span>
             </h1>
-            
+
             <p className="text-xl lg:text-2xl text-white/90 mb-8 max-w-3xl mx-auto animate-slide-in">
-              Learn Korean through K-dramas, gamified quizzes, and personalized curriculum. 
+              Learn Korean through K-dramas, gamified quizzes, and personalized curriculum.
               Build sustainable habits and achieve fluency faster than ever.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in">
               <Link
                 href="/level-assessment"
@@ -131,7 +131,7 @@ export default function HomePage() {
             </div>
           </div>
         </div>
-        
+
         {/* Decorative elements */}
         <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full blur-xl"></div>
         <div className="absolute bottom-20 right-10 w-32 h-32 bg-white/10 rounded-full blur-xl"></div>
@@ -141,11 +141,11 @@ export default function HomePage() {
       <section className="py-20 lg:py-32">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl lg:text-5xl font-bold text-black mb-4">
               Everything You Need to Succeed
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Our comprehensive learning system combines proven methods with cutting-edge technology 
+            <p className="text-xl text-black max-w-3xl mx-auto">
+              Our comprehensive learning system combines proven methods with cutting-edge technology
               to make your Korean learning journey effective and enjoyable.
             </p>
           </div>
@@ -159,12 +159,11 @@ export default function HomePage() {
                 onMouseEnter={() => setSelectedFeature(feature.id)}
                 onMouseLeave={() => setSelectedFeature(null)}
               >
-                <div className={`card-elevated p-8 h-full transition-all duration-300 ${
-                  selectedFeature === feature.id ? 'transform scale-105' : ''
-                }`}>
+                <div className={`card-elevated p-8 h-full transition-all duration-300 ${selectedFeature === feature.id ? 'transform scale-105' : ''
+                  }`}>
                   {/* Gradient overlay */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity duration-300`}></div>
-                  
+
                   <div className="relative">
                     <div className="flex items-center justify-between mb-6">
                       <div className={`w-16 h-16 bg-gradient-to-br ${feature.color} rounded-2xl flex items-center justify-center text-3xl shadow-lg`}>
@@ -172,11 +171,10 @@ export default function HomePage() {
                       </div>
                       <div className="flex items-center space-x-2">
                         {feature.badge && (
-                          <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                            feature.badge === 'NEW' ? 'bg-green-500 text-white' :
-                            feature.badge === 'HOT' ? 'bg-red-500 text-white' :
-                            'bg-blue-500 text-white'
-                          }`}>
+                          <span className={`px-3 py-1 text-xs font-bold rounded-full ${feature.badge === 'NEW' ? 'bg-green-500 text-white' :
+                              feature.badge === 'HOT' ? 'bg-red-500 text-white' :
+                                'bg-blue-500 text-white'
+                            }`}>
                             {feature.badge}
                           </span>
                         )}
@@ -185,15 +183,15 @@ export default function HomePage() {
                         )}
                       </div>
                     </div>
-                    
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">
+
+                    <h3 className="text-xl font-bold text-black mb-3">
                       {feature.title}
                     </h3>
-                    
-                    <p className="text-gray-600 mb-4">
+
+                    <p className="text-black mb-4">
                       {feature.description}
                     </p>
-                    
+
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">
                         {feature.stats}
@@ -222,7 +220,7 @@ export default function HomePage() {
               See why K-Flow is the fastest way to learn Korean
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-5xl font-bold mb-2">10K+</div>
@@ -248,14 +246,14 @@ export default function HomePage() {
       <section className="py-20 bg-gray-50">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-black mb-4">
               Loved by Learners Worldwide
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-black">
               See what our users have to say about their experience
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {testimonials.map((testimonial, index) => (
               <div key={index} className="card p-8">
@@ -264,18 +262,18 @@ export default function HomePage() {
                     {testimonial.avatar}
                   </div>
                   <div>
-                    <div className="font-semibold text-gray-900">{testimonial.name}</div>
-                    <div className="text-sm text-gray-600">{testimonial.role}</div>
+                    <div className="font-semibold text-black">{testimonial.name}</div>
+                    <div className="text-sm text-black">{testimonial.role}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <span key={i} className="text-yellow-400 text-xl">★</span>
                   ))}
                 </div>
-                
-                <p className="text-gray-700 italic">
+
+                <p className="text-black italic">
                   {testimonial.content}
                 </p>
               </div>

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import type { 
-  Achievement, 
-  UserProgress, 
+import type {
+  Achievement,
+  UserProgress,
   AchievementNotification,
   Milestone,
   Badge,
-  ProgressEvent 
+  ProgressEvent
 } from '@/app/types/achievement';
 import { ACHIEVEMENT_DEFINITIONS, MILESTONE_DEFINITIONS } from '@/app/types/achievement';
 
@@ -85,22 +85,34 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
 
     // Update user stats
     const updatedStats = updateStats(userProgress.stats, event);
-    
+
     // Update achievements
     const updatedAchievements = updateAchievements(achievements, event);
-    
+
     // Update milestones
     const updatedMilestones = updateMilestones(milestones, event);
-    
+
     // Check for newly unlocked achievements
     const newUnlocks = checkForNewUnlocks(achievements, updatedAchievements);
-    
+
     // Update experience and level
     const { newExperience, newLevel, didLevelUp } = updateExperience(userProgress, event);
-    
+
+    // Update top-level properties
+    let newTotalStudyTime = userProgress.totalStudyTime;
+    let newStreakDays = userProgress.streakDays;
+
+    if (event.type === 'study_time') {
+      newTotalStudyTime += event.value;
+    } else if (event.type === 'streak_days') {
+      newStreakDays = event.value;
+    }
+
     // Create updated progress
     const updatedProgress: UserProgress = {
       ...userProgress,
+      totalStudyTime: newTotalStudyTime,
+      streakDays: newStreakDays,
       experience: newExperience,
       level: newLevel,
       stats: updatedStats,
@@ -160,7 +172,7 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
         break;
       case 'pronunciation_score':
         updatedStats.pronunciation.sessionsCompleted += 1;
-        updatedStats.pronunciation.averageScore = 
+        updatedStats.pronunciation.averageScore =
           (updatedStats.pronunciation.averageScore + event.value) / 2;
         break;
       case 'listening_hours':
@@ -175,15 +187,10 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
       case 'writing_exercises':
         updatedStats.writing.exercisesCompleted += event.value;
         break;
-      case 'streak_days':
-        updatedStats.streakDays = event.value;
-        break;
-      case 'study_time':
-        updatedStats.totalStudyTime += event.value;
         break;
       case 'quiz_score':
         updatedStats.quizzes.totalCompleted += 1;
-        updatedStats.quizzes.averageScore = 
+        updatedStats.quizzes.averageScore =
           (updatedStats.quizzes.averageScore + event.value) / 2;
         if (event.value === 100) {
           updatedStats.quizzes.perfectScores += 1;
@@ -203,12 +210,12 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
   const updateAchievements = (currentAchievements: Achievement[], event: ProgressEvent): Achievement[] => {
     return currentAchievements.map(achievement => {
       const relevantRequirement = achievement.requirements.find(req => req.type === event.type);
-      
+
       if (!relevantRequirement) return achievement;
 
       const newCurrent = Math.min(relevantRequirement.current + event.value, relevantRequirement.target);
       const isCompleted = newCurrent >= relevantRequirement.target;
-      
+
       // Update requirement
       const updatedRequirements = achievement.requirements.map(req =>
         req.type === event.type
@@ -217,7 +224,7 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
       );
 
       // Calculate overall progress
-      const totalProgress = updatedRequirements.reduce((sum, req) => 
+      const totalProgress = updatedRequirements.reduce((sum, req) =>
         sum + (req.current / req.target), 0
       ) / updatedRequirements.length;
 
@@ -327,7 +334,7 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-pulse">
-          <div className="w-16 h-16 border-4 border-[var(--background)] border-t-transparent rounded-full"></div>
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
       </div>
     );
@@ -344,14 +351,14 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
       </div>
 
       {/* User Progress Overview */}
-      <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-white p-6 rounded-lg">
+      <div className="bg-gradient-to-r from-primary to-primary-light text-white p-6 rounded-lg">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-3xl font-bold">Level {userProgress.level}</p>
             <p className="text-sm opacity-90">Current Level</p>
             <div className="mt-2">
               <div className="w-full bg-white/30 rounded-full h-2">
-                <div 
+                <div
                   className="bg-white h-2 rounded-full"
                   style={{ width: `${(userProgress.experience % 1000) / 10}%` }}
                 ></div>
@@ -383,24 +390,22 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              selectedCategory === 'all'
-                ? 'bg-[var(--background)] text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${selectedCategory === 'all'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
           >
             All ({stats.total})
           </button>
-          
+
           {['vocabulary', 'grammar', 'pronunciation', 'streak', 'time', 'level', 'drama'].map(category => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${
-                selectedCategory === category
-                  ? 'bg-[var(--background)] text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors capitalize ${selectedCategory === category
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
             >
               {category} ({achievements.filter(a => a.category === category).length})
             </button>
@@ -413,11 +418,10 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
         {getFilteredAchievements().map(achievement => (
           <div
             key={achievement.id}
-            className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-200 ${
-              achievement.progress.isCompleted
-                ? 'ring-2 ring-yellow-400 ring-offset-2'
-                : 'hover:shadow-xl'
-            }`}
+            className={`bg-white rounded-lg shadow-lg overflow-hidden transition-all duration-200 ${achievement.progress.isCompleted
+              ? 'ring-2 ring-yellow-400 ring-offset-2'
+              : 'hover:shadow-xl'
+              }`}
           >
             <div className={`p-4 ${achievement.progress.isCompleted ? 'bg-gradient-to-r from-yellow-50 to-orange-50' : ''}`}>
               <div className="flex items-start justify-between mb-3">
@@ -442,12 +446,11 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      achievement.progress.isCompleted
-                        ? 'bg-green-500'
-                        : 'bg-[var(--background)]'
-                    }`}
+                  <div
+                    className={`h-2 rounded-full transition-all duration-300 ${achievement.progress.isCompleted
+                      ? 'bg-green-500'
+                      : 'bg-primary'
+                      }`}
                     style={{ width: `${achievement.progress.percentage}%` }}
                   ></div>
                 </div>
@@ -458,9 +461,8 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
                 {achievement.requirements.map((req, index) => (
                   <div key={index} className="flex justify-between text-xs">
                     <span className="text-gray-600">{req.description}</span>
-                    <span className={`font-medium ${
-                      req.current >= req.target ? 'text-green-600' : 'text-gray-800'
-                    }`}>
+                    <span className={`font-medium ${req.current >= req.target ? 'text-green-600' : 'text-gray-800'
+                      }`}>
                       {req.current} / {req.target}
                     </span>
                   </div>
@@ -516,7 +518,7 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
         <h3 className="text-xl font-bold mb-4">🎯 Milestones</h3>
         <div className="space-y-4">
           {milestones.map(milestone => (
-            <div key={milestone.id} className="border-l-4 border-[var(--background)] pl-4 py-2">
+            <div key={milestone.id} className="border-l-4 border-primary pl-4 py-2">
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-semibold">{milestone.title}</h4>
@@ -529,12 +531,11 @@ export default function AchievementSystem({ userId, onProgressUpdate, onAchievem
                       </span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          milestone.isCompleted
-                            ? 'bg-green-500'
-                            : 'bg-[var(--background)]'
-                        }`}
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${milestone.isCompleted
+                          ? 'bg-green-500'
+                          : 'bg-primary'
+                          }`}
                         style={{ width: `${Math.min((milestone.currentValue / milestone.targetValue) * 100, 100)}%` }}
                       ></div>
                     </div>

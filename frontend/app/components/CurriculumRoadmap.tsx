@@ -44,7 +44,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
       for (let week = levelStartWeek; week <= levelEndWeek && week <= timeframe; week++) {
         const weekInLevel = week - levelStartWeek + 1;
         const totalWeeksInLevel = levelEndWeek - levelStartWeek + 1;
-        
+
         weeklyGoals.push({
           week,
           vocabulary: Math.ceil((levelInfo.estimatedVocabulary * 0.3) / totalWeeksInLevel),
@@ -66,7 +66,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
 
   const generatePracticeTopics = (level: TTMIKLevel, weekInLevel: number, totalWeeksInLevel: number): string[] => {
     const topics: string[] = [];
-    
+
     if (level <= 2) {
       topics.push('Pronunciation practice', 'Basic conversation drills');
     } else if (level <= 4) {
@@ -86,7 +86,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
 
   const generateDramaContent = (level: TTMIKLevel, weekInLevel: number, totalWeeksInLevel: number): string[] => {
     const content: string[] = [];
-    
+
     if (level === 1) {
       content.push('Basic greeting scenes from romantic comedies');
     } else if (level === 2) {
@@ -119,37 +119,37 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
   return (
     <div className="space-y-6">
       {/* Overview */}
-      <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-white p-6 rounded-lg">
+      <div className="bg-gradient-to-r from-[var(--lemon)] to-[var(--lightbeige)] text-black p-6 rounded-lg">
         <h2 className="text-2xl font-bold mb-4">Your Learning Roadmap</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
             <p className="text-3xl font-bold">Level {currentLevel}</p>
-            <p className="text-sm opacity-90">Current Level</p>
+            <p className="text-sm font-medium">Current Level</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-bold">{timeframe} weeks</p>
-            <p className="text-sm opacity-90">Timeframe</p>
+            <p className="text-sm font-medium">Timeframe</p>
           </div>
           <div className="text-center">
             <p className="text-3xl font-bold">Level {targetLevel}</p>
-            <p className="text-sm opacity-90">Target Level</p>
+            <p className="text-sm font-medium">Target Level</p>
           </div>
         </div>
       </div>
 
       {/* Milestones */}
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-bold mb-4">🏆 Milestones</h3>
+        <h3 className="text-xl font-bold mb-4 text-black">🏆 Milestones</h3>
         <div className="space-y-4">
           {roadmap.milestones.map((milestone, index) => (
             <div key={milestone.level} className="border-l-4 border-[var(--lemon)] pl-4 py-2">
               <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="font-semibold text-lg">{milestone.title}</h4>
-                  <p className="text-gray-600 text-sm mt-1">{milestone.description}</p>
+                  <h4 className="font-semibold text-lg text-black">{milestone.title}</h4>
+                  <p className="text-black text-sm mt-1">{milestone.description}</p>
                   <div className="mt-2">
-                    <p className="text-xs text-gray-500 font-semibold mb-1">Requirements:</p>
-                    <ul className="text-xs text-gray-600 space-y-1">
+                    <p className="text-xs text-black font-semibold mb-1">Requirements:</p>
+                    <ul className="text-xs text-black space-y-1">
                       {milestone.requirements.map((req, reqIndex) => (
                         <li key={reqIndex} className="flex items-center">
                           <span className="w-1 h-1 bg-gray-400 rounded-full mr-2"></span>
@@ -179,32 +179,31 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
 
       {/* Weekly Goals */}
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h3 className="text-xl font-bold mb-4">📅 Weekly Study Plan</h3>
+        <h3 className="text-xl font-bold mb-4 text-black">📅 Weekly Study Plan</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {roadmap.weeklyGoals.map((week) => (
             <div
               key={week.week}
-              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                selectedWeek === week.week
-                  ? 'border-[var(--background)] bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedWeek === week.week
+                ? 'border-[var(--background)] bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300'
+                }`}
               onClick={() => setSelectedWeek(selectedWeek === week.week ? null : week.week)}
             >
               <div className="flex justify-between items-center mb-3">
-                <h4 className="font-semibold">Week {week.week}</h4>
+                <h4 className="font-semibold text-black">Week {week.week}</h4>
                 <span className="bg-[var(--lemon)] text-black px-2 py-1 rounded-full text-xs font-semibold">
                   Focus
                 </span>
               </div>
-              
-              <div className="space-y-2 text-sm">
+
+              <div className="space-y-2 text-sm text-black">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">📚 Vocabulary:</span>
+                  <span className="text-black">📚 Vocabulary:</span>
                   <span className="font-semibold">{week.vocabulary} words</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">🧩 Grammar:</span>
+                  <span className="text-black">🧩 Grammar:</span>
                   <span className="font-semibold">{week.grammar} points</span>
                 </div>
               </div>
@@ -212,8 +211,8 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
               {selectedWeek === week.week && (
                 <div className="mt-4 pt-4 border-t border-gray-200 space-y-3">
                   <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">🎯 Practice Topics:</p>
-                    <ul className="text-xs text-gray-600 space-y-1">
+                    <p className="text-xs font-semibold text-black mb-2">🎯 Practice Topics:</p>
+                    <ul className="text-xs text-black space-y-1">
                       {week.practice.map((topic, index) => (
                         <li key={index} className="flex items-center">
                           <span className="w-1 h-1 bg-[var(--background)] rounded-full mr-2"></span>
@@ -222,10 +221,10 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
                       ))}
                     </ul>
                   </div>
-                  
+
                   <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">🎬 Drama Content:</p>
-                    <ul className="text-xs text-gray-600 space-y-1">
+                    <p className="text-xs font-semibold text-black mb-2">🎬 Drama Content:</p>
+                    <ul className="text-xs text-black space-y-1">
                       {week.dramaContent.map((content, index) => (
                         <li key={index} className="flex items-center">
                           <span className="w-1 h-1 bg-[var(--lightblue)] rounded-full mr-2"></span>
@@ -247,19 +246,19 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center">
             <p className="text-2xl font-bold text-black">0%</p>
-            <p className="text-sm text-gray-700">Overall Progress</p>
+            <p className="text-sm text-black">Overall Progress</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-black">0/{roadmap.timeframe}</p>
-            <p className="text-sm text-gray-700">Weeks Completed</p>
+            <p className="text-sm text-black">Weeks Completed</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-black">0</p>
-            <p className="text-sm text-gray-700">Vocabulary Learned</p>
+            <p className="text-sm text-black">Vocabulary Learned</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-black">0</p>
-            <p className="text-sm text-gray-700">Grammar Points</p>
+            <p className="text-sm text-black">Grammar Points</p>
           </div>
         </div>
       </div>

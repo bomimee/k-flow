@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import type { 
-  DramaSentence, 
-  VideoClip, 
-  SubtitleMode, 
+import type {
+  DramaSentence,
+  VideoClip,
+  SubtitleMode,
   MemorizationSession,
   UserRecording,
-  MimickingExercise 
+  MimickingExercise
 } from '@/app/types/drama';
 
 interface DramaSentenceMemorizerProps {
@@ -28,7 +28,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
   const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'processing'>('idle');
   const [userRecording, setUserRecording] = useState<UserRecording | null>(null);
   const [mimickingExercise, setMimickingExercise] = useState<MimickingExercise | null>(null);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
@@ -122,7 +122,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
 
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
-    
+
     const time = videoRef.current.currentTime;
     setCurrentTime(time);
 
@@ -146,17 +146,17 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
-      
+
       const chunks: Blob[] = [];
       mediaRecorder.ondataavailable = (event) => {
         chunks.push(event.data);
       };
-      
+
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(chunks, { type: 'audio/wav' });
         processRecording(audioBlob);
       };
-      
+
       mediaRecorder.start();
       setRecordingStatus('recording');
     } catch (error) {
@@ -191,7 +191,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
 
     setUserRecording(recording);
     setRecordingStatus('idle');
-    
+
     // Update session
     if (session) {
       const updatedSession = {
@@ -211,7 +211,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
     if (!session || !currentClip) return;
 
     const nextSentenceIndex = session.currentSentenceIndex + 1;
-    
+
     if (nextSentenceIndex < currentClip.sentences.length) {
       // Move to next sentence in same clip
       const nextSentence = currentClip.sentences[nextSentenceIndex];
@@ -226,10 +226,10 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
         const nextClip = clips[nextClipIndex];
         setCurrentClip(nextClip);
         setCurrentSentence(nextClip.sentences[0]);
-        setSession({ 
-          ...session, 
-          currentClipIndex: nextClipIndex, 
-          currentSentenceIndex: 0 
+        setSession({
+          ...session,
+          currentClipIndex: nextClipIndex,
+          currentSentenceIndex: 0
         });
         createMimickingExercise(nextClip.sentences[0]);
         setUserRecording(null);
@@ -242,7 +242,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
 
   const completeSession = () => {
     if (!session) return;
-    
+
     const completedSession = {
       ...session,
       progress: {
@@ -250,7 +250,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
         timeSpent: Math.floor((Date.now() - session.startTime.getTime()) / 1000)
       }
     };
-    
+
     onSessionComplete(completedSession);
   };
 
@@ -310,7 +310,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
         >
           <source src={`https://www.youtube.com/watch?v=${currentClip.videoId}`} type="video/mp4" />
         </video>
-        
+
         {/* Subtitles */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
           <div className="text-center text-white">
@@ -329,7 +329,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
           >
             {isPlaying ? '⏸️' : '▶️'}
           </button>
-          
+
           <div className="flex items-center space-x-2">
             <span className="text-white text-sm">
               {Math.floor(currentTime)}s / {Math.floor(currentSentence.endTime)}s
@@ -346,11 +346,10 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
             <button
               key={mode}
               onClick={() => handleSubtitleModeChange(mode)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                subtitleMode.mode === mode
-                  ? 'bg-[var(--background)] text-white'
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${subtitleMode.mode === mode
+                  ? 'bg-primary text-white'
                   : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
+                }`}
             >
               {mode === 'korean' && '🇰🇷 Korean'}
               {mode === 'english' && '🇺🇸 English'}
@@ -359,7 +358,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
             </button>
           ))}
         </div>
-        
+
         <div className="mt-3 flex items-center space-x-4">
           <label className="flex items-center">
             <input
@@ -370,7 +369,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
             />
             <span className="text-sm">Show Romanization</span>
           </label>
-          
+
           <label className="flex items-center">
             <input
               type="checkbox"
@@ -387,18 +386,17 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
       {mimickingExercise && (
         <div className="bg-gradient-to-r from-[var(--lemon)] to-[var(--lightbeige)] p-6 rounded-lg mb-6">
           <h3 className="text-xl font-bold mb-4">🎭 Mimicking Exercise</h3>
-          
+
           <div className="space-y-4">
             {mimickingExercise.steps.map((step, index) => (
               <div
                 key={step.type}
-                className={`p-4 rounded-lg border-2 transition-all ${
-                  index === mimickingExercise.currentStep
+                className={`p-4 rounded-lg border-2 transition-all ${index === mimickingExercise.currentStep
                     ? 'border-[var(--background)] bg-white'
                     : index < mimickingExercise.currentStep
-                    ? 'border-green-500 bg-green-50'
-                    : 'border-gray-200 bg-gray-50'
-                }`}
+                      ? 'border-green-500 bg-green-50'
+                      : 'border-gray-200 bg-gray-50'
+                  }`}
               >
                 <div className="flex items-center justify-between">
                   <div>
@@ -431,12 +429,12 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
                             });
                           }
                         }}
-                        className="bg-[var(--background)] text-white px-4 py-2 rounded-lg font-medium hover:bg-[var(--lightblue)] transition-colors"
+                        className="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors"
                       >
                         {step.type === 'record' && (
                           recordingStatus === 'idle' ? '🎤 Record' :
-                          recordingStatus === 'recording' ? '⏹️ Stop' :
-                          '⏳ Processing...'
+                            recordingStatus === 'recording' ? '⏹️ Stop' :
+                              '⏳ Processing...'
                         )}
                         {step.type !== 'record' && 'Start'}
                       </button>
@@ -478,26 +476,25 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
             <p className="text-sm font-semibold text-gray-700">Context:</p>
             <p className="text-sm text-gray-600">{currentSentence.context}</p>
           </div>
-          
+
           <div>
             <p className="text-sm font-semibold text-gray-700">Characters:</p>
             <p className="text-sm text-gray-600">{currentSentence.characters.join(', ')}</p>
           </div>
-          
+
           {currentSentence.culturalNotes && (
             <div>
               <p className="text-sm font-semibold text-gray-700">Cultural Notes:</p>
               <p className="text-sm text-gray-600">{currentSentence.culturalNotes}</p>
             </div>
           )}
-          
+
           <div>
             <p className="text-sm font-semibold text-gray-700">Difficulty:</p>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${
-              currentSentence.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-              currentSentence.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
+            <span className={`px-2 py-1 rounded text-xs font-medium ${currentSentence.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+                currentSentence.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-red-100 text-red-700'
+              }`}>
               {currentSentence.difficulty}
             </span>
           </div>
@@ -512,10 +509,10 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
         >
           {showTranscript ? 'Hide' : 'Show'} Transcript
         </button>
-        
+
         <button
           onClick={moveToNextSentence}
-          className="px-6 py-3 bg-[var(--background)] text-white rounded-lg font-medium hover:bg-[var(--lightblue)] transition-colors"
+          className="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors"
         >
           Next Sentence →
         </button>

@@ -66,24 +66,24 @@ export default function SRSStudyPage() {
 
   if (showWelcome) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Spaced Repetition Study
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Use our scientifically-proven SRS algorithm to optimize your vocabulary learning and retention.
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
             <div className="space-y-8">
               {/* SRS Explanation */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg">
-                <h3 className="font-semibold text-lg mb-4 text-blue-900">
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-lg">
+                <h3 className="font-semibold text-lg mb-4 text-blue-900 dark:text-blue-100">
                   🧠 How SRS Works
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -91,76 +91,76 @@ export default function SRSStudyPage() {
                     <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
                       <span className="text-white font-bold">1</span>
                     </div>
-                    <h4 className="font-semibold mb-1">Learn</h4>
-                    <p className="text-gray-600">Study new vocabulary items</p>
+                    <h4 className="font-semibold mb-1 dark:text-gray-100">Learn</h4>
+                    <p className="text-gray-600 dark:text-gray-400">Study new vocabulary items</p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
                       <span className="text-white font-bold">2</span>
                     </div>
-                    <h4 className="font-semibold mb-1">Review</h4>
-                    <p className="text-gray-600">Review at optimal intervals</p>
+                    <h4 className="font-semibold mb-1 dark:text-gray-100">Review</h4>
+                    <p className="text-gray-600 dark:text-gray-400">Review at optimal intervals</p>
                   </div>
                   <div className="text-center">
                     <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-2">
                       <span className="text-white font-bold">3</span>
                     </div>
-                    <h4 className="font-semibold mb-1">Master</h4>
-                    <p className="text-gray-600">Long-term retention achieved</p>
+                    <h4 className="font-semibold mb-1 dark:text-gray-100">Master</h4>
+                    <p className="text-gray-600 dark:text-gray-400">Long-term retention achieved</p>
                   </div>
                 </div>
               </div>
 
               {/* Study Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-2xl font-bold text-primary mb-1">12</div>
-                  <div className="text-sm text-gray-600">Due Today</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Due Today</div>
                 </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-2xl font-bold text-green-600 mb-1">85%</div>
-                  <div className="text-sm text-gray-600">Accuracy</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Accuracy</div>
                 </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-2xl font-bold text-orange-500 mb-1">7</div>
-                  <div className="text-sm text-gray-600">Day Streak</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Day Streak</div>
                 </div>
-                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                   <div className="text-2xl font-bold text-purple-600 mb-1">156</div>
-                  <div className="text-sm text-gray-600">Total Learned</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-300">Total Learned</div>
                 </div>
               </div>
 
               {/* Features */}
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Features</h3>
+                <h3 className="font-semibold text-lg dark:text-gray-100">Features</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-start space-x-3">
                     <span className="text-green-500 text-xl">✓</span>
                     <div>
-                      <h4 className="font-semibold">SM-2 Algorithm</h4>
-                      <p className="text-sm text-gray-600">Proven spaced repetition method</p>
+                      <h4 className="font-semibold dark:text-gray-100">SM-2 Algorithm</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Proven spaced repetition method</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <span className="text-green-500 text-xl">✓</span>
                     <div>
-                      <h4 className="font-semibold">Adaptive Learning</h4>
-                      <p className="text-sm text-gray-600">Difficulty adjusts to your level</p>
+                      <h4 className="font-semibold dark:text-gray-100">Adaptive Learning</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Difficulty adjusts to your level</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <span className="text-green-500 text-xl">✓</span>
                     <div>
-                      <h4 className="font-semibold">Priority Scheduling</h4>
-                      <p className="text-sm text-gray-600">Focus on what needs review most</p>
+                      <h4 className="font-semibold dark:text-gray-100">Priority Scheduling</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Focus on what needs review most</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">
                     <span className="text-green-500 text-xl">✓</span>
                     <div>
-                      <h4 className="font-semibold">Progress Tracking</h4>
-                      <p className="text-sm text-gray-600">Detailed learning analytics</p>
+                      <h4 className="font-semibold dark:text-gray-100">Progress Tracking</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Detailed learning analytics</p>
                     </div>
                   </div>
                 </div>
@@ -181,20 +181,20 @@ export default function SRSStudyPage() {
 
   if (studyResults) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
             <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-3xl">🎉</span>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Study Session Complete!
             </h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div className="text-center">
                 <div className="text-5xl font-bold text-primary mb-2">
@@ -246,9 +246,9 @@ export default function SRSStudyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ModernNavigation />
-      
+
       <main className="max-w-4xl mx-auto px-6 py-12">
         <SRSStudySession
           vocabulary={demoVocabulary}

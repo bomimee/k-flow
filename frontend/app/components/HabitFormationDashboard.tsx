@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { 
-  Behavior, 
-  HabitFormation, 
-  MicroHabit, 
+import type {
+  Behavior,
+  HabitFormation,
+  MicroHabit,
   BehaviorDesign,
-  BehaviorCategory 
+  BehaviorCategory
 } from '@/app/types/behavior';
 import { BehaviorModel } from '@/app/services/behaviorModel';
 
@@ -117,7 +117,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
   const updateHabitFormation = () => {
     const completedBehaviors = behaviors.filter(b => b.lastCompleted);
     const totalCompleted = behaviors.reduce((sum, b) => sum + b.streak, 0);
-    
+
     const formation: HabitFormation = {
       behaviors,
       currentStreak: Math.max(...behaviors.map(b => b.streak)),
@@ -186,7 +186,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
   const getMicroHabitsForBehavior = (behaviorId: string): MicroHabit[] => {
     const behavior = behaviors.find(b => b.id === behaviorId);
     if (!behavior) return [];
-    
+
     return BehaviorModel.createMicroHabits(behavior);
   };
 
@@ -194,7 +194,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-pulse">
-          <div className="w-16 h-16 border-4 border-[var(--background)] border-t-transparent rounded-full"></div>
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full"></div>
         </div>
       </div>
     );
@@ -211,7 +211,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
       </div>
 
       {/* Overall Progress */}
-      <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-white p-6 rounded-lg">
+      <div className="bg-gradient-to-r from-primary to-primary-light text-white p-6 rounded-lg">
         <h3 className="text-xl font-bold mb-4">Overall Progress</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="text-center">
@@ -254,7 +254,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
           <h3 className="text-xl font-bold">🎯 Active Behaviors</h3>
           <button
             onClick={() => setShowDesignWizard(true)}
-            className="bg-[var(--background)] text-white px-4 py-2 rounded-lg font-medium hover:bg-[var(--lightblue)] transition-colors"
+            className="bg-primary text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-dark transition-colors"
           >
             + Add Behavior
           </button>
@@ -272,37 +272,35 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
             return (
               <div
                 key={behavior.id}
-                className={`border-2 rounded-lg p-4 transition-all duration-200 ${
-                  selectedBehavior?.id === behavior.id
-                    ? 'border-[var(--background)] bg-blue-50'
+                className={`border-2 rounded-lg p-4 transition-all duration-200 ${selectedBehavior?.id === behavior.id
+                    ? 'border-primary bg-blue-50'
                     : 'border-gray-200 hover:border-gray-300'
-                }`}
+                  }`}
                 onClick={() => setSelectedBehavior(behavior)}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex-1">
                     <h4 className="text-lg font-semibold mb-2">{behavior.name}</h4>
                     <p className="text-gray-600 text-sm mb-3">{behavior.description}</p>
-                    
+
                     <div className="flex items-center space-x-4 text-sm">
-                      <span className={`px-2 py-1 rounded font-medium ${
-                        behavior.category === 'vocabulary' ? 'bg-blue-100 text-blue-700' :
-                        behavior.category === 'grammar' ? 'bg-purple-100 text-purple-700' :
-                        behavior.category === 'speaking' ? 'bg-green-100 text-green-700' :
-                        behavior.category === 'listening' ? 'bg-orange-100 text-orange-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
+                      <span className={`px-2 py-1 rounded font-medium ${behavior.category === 'vocabulary' ? 'bg-blue-100 text-blue-700' :
+                          behavior.category === 'grammar' ? 'bg-purple-100 text-purple-700' :
+                            behavior.category === 'speaking' ? 'bg-green-100 text-green-700' :
+                              behavior.category === 'listening' ? 'bg-orange-100 text-orange-700' :
+                                'bg-gray-100 text-gray-700'
+                        }`}>
                         {behavior.category}
                       </span>
-                      
+
                       <span className="text-gray-500">
                         {behavior.frequency}
                       </span>
-                      
+
                       <span className="flex items-center">
                         🔥 {behavior.streak}
                       </span>
-                      
+
                       <span className={`font-semibold ${getBehaviorColor(score)}`}>
                         {willOccur ? '✓' : '⚠'} {score.toFixed(1)}/10
                       </span>
@@ -337,7 +335,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
                       <span className="text-sm font-semibold w-8">{behavior.motivation}</span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="text-sm text-gray-600">Ability</label>
                     <div className="flex items-center space-x-2 mt-1">
@@ -353,7 +351,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
                       <span className="text-sm font-semibold w-8">{behavior.ability}</span>
                     </div>
                   </div>
-                  
+
                   <div>
                     <label className="text-sm text-gray-600">Prompt</label>
                     <div className="flex items-center space-x-2 mt-1">
@@ -388,7 +386,7 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
       {selectedBehavior && (
         <div className="bg-white p-6 rounded-lg shadow-lg">
           <h3 className="text-xl font-bold mb-4">🔍 Behavior Details: {selectedBehavior.name}</h3>
-          
+
           {/* Micro-habits */}
           <div className="mb-6">
             <h4 className="font-semibold mb-3">Micro-Habits (Tiny Steps)</h4>
@@ -402,12 +400,12 @@ export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitForma
                     </div>
                     <input
                       type="checkbox"
-                      className="w-5 h-5 text-[var(--background)]"
+                      className="w-5 h-5 text-primary"
                       checked={microHabit.isCompleted}
                       onChange={(e) => {
                         // Handle micro-habit completion
-                        const updatedHabits = microHabits.map(h => 
-                          h.id === microHabit.id 
+                        const updatedHabits = microHabits.map(h =>
+                          h.id === microHabit.id
                             ? { ...h, isCompleted: e.target.checked, completedAt: e.target.checked ? new Date() : undefined }
                             : h
                         );

@@ -3,12 +3,13 @@
 import ModernNavigation from "@/app/components/ModernNavigation";
 import CurriculumRoadmap from "@/app/components/CurriculumRoadmap";
 import { useState } from "react";
+import type { TTMIKLevel } from "@/app/types/level";
 
 export default function CurriculumPage() {
   const [showSetup, setShowSetup] = useState(true);
   const [roadmapConfig, setRoadmapConfig] = useState({
-    currentLevel: 1,
-    targetLevel: 5,
+    currentLevel: 1 as TTMIKLevel,
+    targetLevel: 5 as TTMIKLevel,
     timeframe: 12 // weeks
   });
 
@@ -18,32 +19,32 @@ export default function CurriculumPage() {
 
   if (showSetup) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold text-black dark:text-white mb-4">
               Create Your Learning Roadmap
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-black dark:text-white max-w-2xl mx-auto">
               Set your goals and we'll create a personalized curriculum to help you reach them.
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
             <div className="space-y-8">
               {/* Current Level */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">
                   Current Level
                 </label>
                 <select
                   value={roadmapConfig.currentLevel}
-                  onChange={(e) => setRoadmapConfig({...roadmapConfig, currentLevel: parseInt(e.target.value)})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={(e) => setRoadmapConfig({ ...roadmapConfig, currentLevel: parseInt(e.target.value) as TTMIKLevel })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-black dark:text-white"
                 >
-                  {[1,2,3,4,5,6,7,8,9,10].map(level => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                     <option key={level} value={level}>TTMIK Level {level}</option>
                   ))}
                 </select>
@@ -51,15 +52,15 @@ export default function CurriculumPage() {
 
               {/* Target Level */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">
                   Target Level
                 </label>
                 <select
                   value={roadmapConfig.targetLevel}
-                  onChange={(e) => setRoadmapConfig({...roadmapConfig, targetLevel: parseInt(e.target.value)})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={(e) => setRoadmapConfig({ ...roadmapConfig, targetLevel: parseInt(e.target.value) as TTMIKLevel })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-black dark:text-white"
                 >
-                  {[1,2,3,4,5,6,7,8,9,10].map(level => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                     <option key={level} value={level} disabled={level <= roadmapConfig.currentLevel}>
                       TTMIK Level {level}
                     </option>
@@ -69,13 +70,13 @@ export default function CurriculumPage() {
 
               {/* Timeframe */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-black dark:text-white mb-2">
                   Learning Timeline (weeks)
                 </label>
                 <select
                   value={roadmapConfig.timeframe}
-                  onChange={(e) => setRoadmapConfig({...roadmapConfig, timeframe: parseInt(e.target.value)})}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  onChange={(e) => setRoadmapConfig({ ...roadmapConfig, timeframe: parseInt(e.target.value) })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-gray-700 text-black dark:text-white"
                 >
                   <option value={4}>4 weeks (Intensive)</option>
                   <option value={8}>8 weeks (Fast)</option>
@@ -86,9 +87,9 @@ export default function CurriculumPage() {
               </div>
 
               {/* Summary */}
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h3 className="font-semibold text-lg mb-3">Your Learning Plan</h3>
-                <div className="space-y-2 text-gray-700">
+              <div className="bg-gray-50 dark:bg-gray-700/50 p-6 rounded-lg">
+                <h3 className="font-semibold text-lg mb-3 dark:text-white">Your Learning Plan</h3>
+                <div className="space-y-2 text-black dark:text-white">
                   <p>• From Level {roadmapConfig.currentLevel} to Level {roadmapConfig.targetLevel}</p>
                   <p>• {roadmapConfig.targetLevel - roadmapConfig.currentLevel} levels to complete</p>
                   <p>• {roadmapConfig.timeframe} weeks timeline</p>
@@ -110,15 +111,15 @@ export default function CurriculumPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ModernNavigation />
-      
+
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-black dark:text-white mb-4">
             Your Personalized Curriculum
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-black dark:text-white">
             Follow this roadmap to reach your Korean learning goals
           </p>
         </div>

@@ -1,18 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { VocabularyItem } from '@/app/types/vocabulary';
+import type { VocabularyItem, SRSStudyResults } from '@/app/types/vocabulary';
 import { SpacedRepetitionSystem } from '@/app/services/spacedRepetition';
 
 interface SRSStudySessionProps {
   vocabulary: VocabularyItem[];
   onSessionComplete: (results: SRSStudyResults) => void;
-}
-
-interface SRSStudyResults {
-  itemsStudied: number;
-  correctAnswers: number;
-  totalTimeSpent: number;
-  averageQuality: number;
-  itemsUpdated: VocabularyItem[];
 }
 
 export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSStudySessionProps) {
@@ -40,7 +32,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
 
   const initializeSession = () => {
     const recommendations = SpacedRepetitionSystem.getStudySessionRecommendations(vocabulary);
-    
+
     setSession({
       reviewItems: recommendations.reviewItems,
       newItems: recommendations.newItems,
@@ -84,7 +76,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
     };
 
     const updatedAnswers = [...session.answers, answer];
-    
+
     // Move to next item
     const nextIndex = session.currentIndex + 1;
     let nextItem: VocabularyItem | null = null;
@@ -118,7 +110,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
 
     // Update vocabulary items based on performance
     const itemsUpdated = SpacedRepetitionSystem.batchUpdateItems(vocabulary, answers);
-    
+
     const results: SRSStudyResults = {
       itemsStudied: answers.length,
       correctAnswers: answers.filter(a => a.quality >= 3).length,
@@ -140,7 +132,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
   }
 
   const item = session.currentItem;
-  const progress = session.isReviewMode 
+  const progress = session.isReviewMode
     ? ((session.currentIndex + 1) / session.reviewItems.length) * 100
     : ((session.currentIndex + 1) / session.newItems.length) * 100;
 
@@ -149,11 +141,10 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
       {/* Session Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
-          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-            session.isReviewMode 
-              ? 'bg-orange-100 text-orange-700' 
-              : 'bg-green-100 text-green-700'
-          }`}>
+          <span className={`px-3 py-1 rounded-full text-sm font-semibold ${session.isReviewMode
+            ? 'bg-orange-100 text-orange-700'
+            : 'bg-green-100 text-green-700'
+            }`}>
             {session.isReviewMode ? 'Review' : 'New Learning'}
           </span>
           <span className="text-gray-600">
@@ -167,29 +158,28 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
 
       {/* Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
-        <div 
-          className={`h-2 rounded-full transition-all duration-300 ${
-            session.isReviewMode ? 'bg-orange-500' : 'bg-green-500'
-          }`}
+        <div
+          className={`h-2 rounded-full transition-all duration-300 ${session.isReviewMode ? 'bg-orange-500' : 'bg-green-500'
+            }`}
           style={{ width: `${progress}%` }}
         ></div>
       </div>
 
       {/* Vocabulary Card */}
-      <div className="bg-gradient-to-br from-[var(--background)] to-[var(--lightblue)] text-white p-8 rounded-lg mb-6">
+      <div className="bg-gradient-to-br from-primary to-primary-light text-white p-8 rounded-lg mb-6">
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-4">{item.korean}</h1>
-          
+
           {item.hanja && (
             <p className="text-2xl mb-2 opacity-90">{item.hanja}</p>
           )}
-          
+
           <p className="text-lg mb-4 opacity-80">[{item.pronunciation}]</p>
-          
+
           {showAnswer && (
             <div className="mt-6 pt-6 border-t border-white/30">
               <p className="text-2xl font-semibold mb-3">{item.meaning}</p>
-              
+
               <div className="bg-white/20 p-4 rounded-lg mb-4">
                 <p className="text-sm mb-2 opacity-90">Example:</p>
                 <p className="font-semibold mb-1">{item.exampleSentence}</p>
@@ -211,11 +201,10 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
         <div className="flex justify-between items-center text-sm">
           <div>
             <span className="font-semibold">Difficulty:</span>
-            <span className={`ml-2 px-2 py-1 rounded text-xs ${
-              item.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+            <span className={`ml-2 px-2 py-1 rounded text-xs ${item.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
               item.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-              'bg-red-100 text-red-700'
-            }`}>
+                'bg-red-100 text-red-700'
+              }`}>
               {item.difficulty}
             </span>
           </div>
@@ -241,7 +230,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
           </button>
           <button
             onClick={handleShowAnswer}
-            className="w-full py-3 bg-[var(--background)] text-white rounded-lg font-semibold hover:bg-[var(--lightblue)] transition-colors"
+            className="w-full py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-dark transition-colors"
           >
             📖 Show Answer
           </button>
@@ -254,13 +243,12 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
               <button
                 key={quality}
                 onClick={() => handleQualityRating(quality)}
-                className={`py-3 rounded-lg font-semibold transition-all ${
-                  quality === 1 ? 'bg-red-500 text-white hover:bg-red-600' :
+                className={`py-3 rounded-lg font-semibold transition-all ${quality === 1 ? 'bg-red-500 text-white hover:bg-red-600' :
                   quality === 2 ? 'bg-orange-500 text-white hover:bg-orange-600' :
-                  quality === 3 ? 'bg-yellow-500 text-white hover:bg-yellow-600' :
-                  quality === 4 ? 'bg-green-500 text-white hover:bg-green-600' :
-                  'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
+                    quality === 3 ? 'bg-yellow-500 text-white hover:bg-yellow-600' :
+                      quality === 4 ? 'bg-green-500 text-white hover:bg-green-600' :
+                        'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
               >
                 {quality === 1 && '😵'}
                 {quality === 2 && '😟'}

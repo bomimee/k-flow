@@ -308,7 +308,7 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       {/* Quiz Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
-          <span className="bg-[var(--background)] text-white px-3 py-1 rounded-full text-sm font-semibold">
+          <span className="bg-primary text-white px-3 py-1 rounded-full text-sm font-semibold">
             {mode}
           </span>
           <span className="text-gray-600">
@@ -336,7 +336,7 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       {/* Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
         <div
-          className="bg-[var(--background)] h-2 rounded-full transition-all duration-300"
+          className="bg-primary h-2 rounded-full transition-all duration-300"
           style={{ width: `${((session.currentQuestion + 1) / session.questions.length) * 100}%` }}
         ></div>
       </div>
@@ -373,7 +373,7 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
                         ? 'border-red-500 bg-red-50'
                         : 'border-gray-200 bg-gray-50'
                     : selectedAnswer === option
-                      ? 'border-[var(--background)] bg-blue-50'
+                      ? 'border-primary bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300'
                     }`}
                 >
@@ -415,7 +415,7 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
                   ? selectedAnswer === currentQuestion.correctAnswer
                     ? 'border-green-500 bg-green-50'
                     : 'border-red-500 bg-red-50'
-                  : 'border-gray-300 focus:border-[var(--background)]'
+                  : 'border-gray-300 focus:border-primary'
                   }`}
               />
               {showResult && (
@@ -443,10 +443,10 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
           onClick={showResult ? handleNext : handleAnswer}
           disabled={!selectedAnswer && !showResult}
           className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-md ${!selectedAnswer && !showResult
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : showResult
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
+            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            : showResult
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-lg transform hover:-translate-y-0.5'
             }`}
         >
           {showResult

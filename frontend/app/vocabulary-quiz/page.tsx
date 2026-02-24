@@ -32,24 +32,24 @@ export default function VocabularyQuizPage() {
 
   if (showSetup) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <ModernNavigation />
 
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Vocabulary Quiz Challenge
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Test your Korean vocabulary with our gamified quiz system featuring Hanja integration and multiple question types.
             </p>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
             <div className="space-y-8">
               {/* Quiz Mode */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Quiz Mode
                 </label>
                 <div className="grid grid-cols-2 gap-4">
@@ -76,7 +76,7 @@ export default function VocabularyQuizPage() {
 
               {/* Question Count */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Number of Questions
                 </label>
                 <div className="grid grid-cols-4 gap-4">
@@ -85,8 +85,8 @@ export default function VocabularyQuizPage() {
                       key={count}
                       onClick={() => setQuizConfig({ ...quizConfig, questionCount: count })}
                       className={`p-3 rounded-lg border-2 font-semibold transition-all ${quizConfig.questionCount === count
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800'
                         }`}
                     >
                       {count}
@@ -97,7 +97,7 @@ export default function VocabularyQuizPage() {
 
               {/* Difficulty */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Difficulty Level
                 </label>
                 <div className="grid grid-cols-4 gap-4">
@@ -111,8 +111,8 @@ export default function VocabularyQuizPage() {
                       key={level.value}
                       onClick={() => setQuizConfig({ ...quizConfig, difficulty: level.value as any })}
                       className={`p-3 rounded-lg border-2 font-semibold transition-all ${quizConfig.difficulty === level.value
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800'
                         }`}
                     >
                       {level.label}
@@ -123,7 +123,7 @@ export default function VocabularyQuizPage() {
 
               {/* Categories */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Categories (Optional)
                 </label>
                 <div className="grid grid-cols-3 gap-4">
@@ -149,9 +149,9 @@ export default function VocabularyQuizPage() {
                           setQuizConfig({ ...quizConfig, categories: newCategories });
                         }
                       }}
-                      className={`p-3 rounded-lg border-2 font-semibold transition-all ${quizConfig.categories.includes(category.value)
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-200 hover:border-gray-300'
+                      className={`p-3 rounded-lg border-2 font-semibold transition-all text-sm ${quizConfig.categories.includes(category.value)
+                        ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800'
                         }`}
                     >
                       {category.label}
@@ -162,7 +162,7 @@ export default function VocabularyQuizPage() {
 
               {/* TTMIK Level */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   TTMIK Level
                 </label>
                 <div className="grid grid-cols-5 gap-2">
@@ -171,8 +171,8 @@ export default function VocabularyQuizPage() {
                       key={level}
                       onClick={() => setQuizConfig({ ...quizConfig, level: level as any })}
                       className={`p-2 rounded-lg border-2 font-semibold transition-all ${(quizConfig as any).level === level
-                        ? 'border-primary bg-primary/10'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-primary bg-primary/10 dark:bg-primary/20 text-primary'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800'
                         }`}
                     >
                       {level}
@@ -207,7 +207,7 @@ export default function VocabularyQuizPage() {
 
   if (quizResult) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <ModernNavigation />
 
         <main className="max-w-4xl mx-auto px-6 py-12">
@@ -215,12 +215,12 @@ export default function VocabularyQuizPage() {
             <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-white text-3xl">🎉</span>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Quiz Complete!
             </h1>
           </div>
 
-          <div className="bg-white rounded-lg shadow-lg p-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
               <div className="text-center">
                 <div className="text-5xl font-bold text-primary mb-2">
@@ -276,7 +276,7 @@ export default function VocabularyQuizPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ModernNavigation />
 
       <main className="max-w-4xl mx-auto px-6 py-12">

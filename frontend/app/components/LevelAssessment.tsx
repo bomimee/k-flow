@@ -72,7 +72,7 @@ export default function LevelAssessment({ onLevelDetermined }: LevelAssessmentPr
 
   const calculateLevel = (finalAnswers: number[]) => {
     const averageScore = finalAnswers.reduce((a, b) => a + b, 0) / finalAnswers.length;
-    
+
     let recommendedLevel: TTMIKLevel;
     if (averageScore < 1) {
       recommendedLevel = 1;
@@ -97,10 +97,10 @@ export default function LevelAssessment({ onLevelDetermined }: LevelAssessmentPr
   if (showResult) {
     return (
       <div className="text-center p-8 bg-[var(--lemon)] rounded-lg">
-        <h2 className="text-2xl font-bold mb-4">Level Assessment Complete!</h2>
-        <p className="text-lg mb-4">Your recommended starting level is being calculated...</p>
+        <h2 className="text-2xl font-bold mb-4 text-black">Level Assessment Complete!</h2>
+        <p className="text-lg mb-4 text-black">Your recommended starting level is being calculated...</p>
         <div className="animate-pulse">
-          <div className="w-16 h-16 border-4 border-[var(--background)] border-t-transparent rounded-full mx-auto"></div>
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
         </div>
       </div>
     );
@@ -110,33 +110,33 @@ export default function LevelAssessment({ onLevelDetermined }: LevelAssessmentPr
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       <div className="mb-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Level Assessment</h2>
-          <span className="text-sm text-gray-600">
+          <h2 className="text-xl font-bold" style={{ color: "black" }}>Level Assessment</h2>
+          <span className="text-sm text-black">
             Question {currentQuestion + 1} of {assessmentQuestions.length}
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
-            className="bg-[var(--background)] h-2 rounded-full transition-all duration-300"
+          <div
+            className="bg-primary h-2 rounded-full transition-all duration-300"
             style={{ width: `${((currentQuestion + 1) / assessmentQuestions.length) * 100}%` }}
           ></div>
         </div>
       </div>
 
       <div className="space-y-6">
-        <h3 className="text-lg font-semibold text-gray-800">
+        <h3 className="text-lg font-semibold text-black">
           {assessmentQuestions[currentQuestion].question}
         </h3>
-        
+
         <div className="space-y-3">
           {assessmentQuestions[currentQuestion].options.map((option, index) => (
             <button
               key={index}
               onClick={() => handleAnswer(index)}
-              className="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-[var(--background)] hover:bg-blue-50 transition-all duration-200"
+              className="w-full p-4 text-left border-2 border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-all duration-200 text-black"
             >
               <span className="flex items-center">
-                <span className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center mr-3 text-sm font-semibold">
+                <span className="w-8 h-8 rounded-full border-2 border-gray-300 flex items-center justify-center mr-3 text-sm font-semibold text-black">
                   {String.fromCharCode(65 + index)}
                 </span>
                 {option}
