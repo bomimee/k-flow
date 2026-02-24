@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { VocabularyItem, SRSStudyResults } from '@/app/types/vocabulary';
 import { SpacedRepetitionSystem } from '@/app/services/spacedRepetition';
+import { useAuth } from '@/app/hooks/useAuth';
+import { fetchDueItems, updateSRSProgress } from '@/app/services/srs';
 import { fetchVocabulary } from '@/app/services/vocabulary';
 
 interface SRSStudySessionProps {
@@ -28,10 +30,43 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
   const [hintsUsed, setHintsUsed] = useState(0);
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
-    initializeSession(vocabulary);
-  }, [vocabulary]);
+    if (user) {
+      loadRealData();
+    } else {
+      initializeSession(vocabulary);
+    }
+  }, [vocabulary, user]);
+
+  const loadRealData = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const dueItems = await fetchDueItems(user.id);
+      if (dueItems.length > 0) {
+        setSession({
+          reviewItems: dueItems,
+          newItems: [],
+          currentIndex: 0,
+          currentItem: dueItems[0],
+          isReviewMode: true,
+          startTime: new Date(),
+          answers: []
+        });
+        setCurrentItem(dueItems[0]);
+      } else {
+        const newItems = await fetchVocabulary(1, [], 10);
+        initializeSession(newItems);
+      }
+    } catch (err) {
+      console.error('Error loading real SRS data:', err);
+      initializeSession(vocabulary);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const initializeSession = (vocabToUse: VocabularyItem[]) => {
@@ -104,11 +139,13 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
   };
 
   const handleQualityRating = async (quality: number) => {
-    if (!session || !session.currentItem) return;
+    if (!session || !session.currentItem || !user) return;
 
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const updatedSRS = SpacedRepetitionSystem.calculateNextReview(session.currentItem.srsData, quality);
+
+    // Persist to DB in background
+    updateSRSProgress(user.id, session.currentItem.id, updatedSRS);
     const answer = {
       itemId: session.currentItem.id,
       quality,

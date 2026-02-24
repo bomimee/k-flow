@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '../hooks/useAuth';
 
 interface NavigationItem {
   name: string;
@@ -16,6 +17,7 @@ interface NavigationItem {
 export default function ModernNavigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { user, signInWithGoogle, signOut } = useAuth();
 
   const navigationItems: NavigationItem[] = [
     {
@@ -125,11 +127,38 @@ export default function ModernNavigation() {
               ))}
             </div>
 
-            {/* Right: Actions */}
-            <div className="flex items-center justify-end space-x-3">
-              <button className="px-4 py-2 bg-gradient-primary text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all active:scale-95">
-                Join Now
-              </button>
+            {/* Right: User Profile & Auth */}
+            <div className="flex items-center justify-end">
+              {user ? (
+                <div className="flex items-center space-x-4">
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-medium text-gray-900">{user.user_metadata.full_name || user.email}</span>
+                    <button
+                      onClick={signOut}
+                      className="text-xs text-gray-500 hover:text-red-600 transition-colors"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                  <div className="w-10 h-10 bg-gradient-secondary rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden">
+                    {user.user_metadata.avatar_url ? (
+                      <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-white text-sm font-bold">
+                        {(user.user_metadata.full_name || user.email || 'U')[0].toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={signInWithGoogle}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all shadow-sm"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-4 h-4" />
+                  <span>Sign in with Google</span>
+                </button>
+              )}
             </div>
 
           </div>

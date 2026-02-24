@@ -14,6 +14,8 @@ const montserrat = Montserrat({
   variable: "--font-montserrat",
 });
 
+import { AuthProvider } from "./hooks/useAuth";
+
 export default function RootLayout({
   children,
 }: {
@@ -22,8 +24,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={montserrat.variable}>
       <body className="min-h-screen flex flex-col font-montserrat">
-        {children}
-        <Footer />
+        <AuthProvider>
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );
