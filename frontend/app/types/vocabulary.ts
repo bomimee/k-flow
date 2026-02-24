@@ -130,3 +130,11 @@ export interface QuizModeConfig {
   categories: string[];
   levelRange: [number, number];
 }
+
+export interface SRSStudyResults {
+  itemsStudied: number;
+  correctAnswers: number;
+  totalTimeSpent: number;
+  averageQuality: number;
+  itemsUpdated: VocabularyItem[];
+}

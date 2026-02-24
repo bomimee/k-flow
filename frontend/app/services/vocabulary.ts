@@ -27,8 +27,18 @@ export async function fetchVocabulary(
             throw new Error(errorData.detail || `failed to fetch vocabulary: ${response.status}`);
         }
 
-        const data: VocabularyItem[] = await response.json();
-        return data;
+        const data = await response.json();
+        const mappedData: VocabularyItem[] = data.map((item: any) => ({
+            ...item,
+            srsData: item.srsData || {
+                interval: 1,
+                repetitions: 0,
+                easeFactor: 2.5,
+                nextReview: new Date(),
+                successRate: 0
+            }
+        }));
+        return mappedData;
     } catch (error) {
         console.error('❌ fetchVocabulary error:', error);
         throw error;

@@ -19,12 +19,6 @@ export default function ModernNavigation() {
 
   const navigationItems: NavigationItem[] = [
     {
-      name: 'Home',
-      href: '/',
-      icon: '🏠',
-      description: 'Welcome to K-Flow'
-    },
-    {
       name: 'Level Assessment',
       href: '/level-assessment',
       icon: '📊',
@@ -88,54 +82,56 @@ export default function ModernNavigation() {
     <>
       {/* Desktop Navigation */}
       <nav className="hidden lg:block bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex justify-between items-center h-16">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
+        <div className="mx-auto px-6">
+          <div className="grid grid-cols-3 items-center h-20">
+            {/* Left: Logo */}
+            <div className="flex items-center justify-start space-x-3">
               <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
-                <span className="text-white text-xl font-bold">K</span>
+                <Link href="/" className="text-white text-xl font-bold">K</Link>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">K-Flow</h1>
+                <Link href="/" className="text-xl font-bold text-gray-900">K-Flow</Link>
               </div>
             </div>
 
-            {/* Navigation Items */}
-            <div className="flex items-center space-x-1">
+            {/* Center: Navigation Items */}
+            <div className="flex items-center justify-center space-x-1">
               {navigationItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(item.href)
-                      ? 'bg-primary text-white'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                 >
                   <span className="flex items-center space-x-2">
                     <span>{item.icon}</span>
                     <span>{item.name}</span>
                     {item.badge && (
-                      <span className={`absolute -top-1 -right-1 px-2 py-0.5 text-xs rounded-full ${item.badge === 'NEW' ? 'bg-green-500 text-white' :
-                          item.badge === 'HOT' ? 'bg-red-500 text-white' :
-                            'bg-blue-500 text-white'
-                        }`}>
+                      <span
+                        className={`absolute -top-1 -right-1 px-2 py-0.5 text-xs rounded-full ${item.badge === 'NEW'
+                          ? 'bg-green-500 text-white'
+                          : item.badge === 'HOT'
+                            ? 'bg-red-500 text-white'
+                            : 'bg-blue-500 text-white'
+                          }`}
+                      >
                         {item.badge}
                       </span>
-                    )}
-                    {item.isNew && !item.badge && (
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
                     )}
                   </span>
                 </Link>
               ))}
             </div>
 
-            {/* User Profile */}
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-secondary rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-semibold">U</span>
-              </div>
+            {/* Right: Actions */}
+            <div className="flex items-center justify-end space-x-3">
+              <button className="px-4 py-2 bg-gradient-primary text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all active:scale-95">
+                Join Now
+              </button>
             </div>
+
           </div>
         </div>
       </nav>
@@ -179,8 +175,8 @@ export default function ModernNavigation() {
                   href={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={`block px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(item.href)
-                      ? 'bg-primary text-white'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-primary text-white'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                 >
                   <div className="flex items-center justify-between">
@@ -194,8 +190,8 @@ export default function ModernNavigation() {
                     <div className="flex items-center space-x-2">
                       {item.badge && (
                         <span className={`px-2 py-1 text-xs rounded-full ${item.badge === 'NEW' ? 'bg-green-500 text-white' :
-                            item.badge === 'HOT' ? 'bg-red-500 text-white' :
-                              'bg-blue-500 text-white'
+                          item.badge === 'HOT' ? 'bg-red-500 text-white' :
+                            'bg-blue-500 text-white'
                           }`}>
                           {item.badge}
                         </span>

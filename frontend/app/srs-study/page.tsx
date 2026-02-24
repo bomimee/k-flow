@@ -9,7 +9,7 @@ export default function SRSStudyPage() {
   // 데모 어휘 데이터 - 실제로는 API에서 가져옴
   const demoVocabulary: VocabularyItem[] = [
     {
-      id: '1',
+      id: 'ca30de01-5b32-41b3-ac70-9f1fb81385bd', // Real ID from DB (가족)
       korean: '사랑',
       hanja: '愛',
       meaning: 'love',
@@ -30,7 +30,7 @@ export default function SRSStudyPage() {
       }
     },
     {
-      id: '2',
+      id: 'ccf9fc82-5003-4cbb-9620-fc200395add0', // Real ID from DB (공항)
       korean: '공부',
       hanja: '工夫',
       meaning: 'study',
@@ -68,7 +68,7 @@ export default function SRSStudyPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -183,7 +183,7 @@ export default function SRSStudyPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
             <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -248,7 +248,7 @@ export default function SRSStudyPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <ModernNavigation />
-      
+
       <main className="max-w-4xl mx-auto px-6 py-12">
         <SRSStudySession
           vocabulary={demoVocabulary}
