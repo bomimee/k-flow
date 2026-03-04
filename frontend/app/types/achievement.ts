@@ -29,7 +29,7 @@ export interface AchievementProgress {
   lastUpdated: Date;
 }
 
-export type AchievementCategory = 
+export type AchievementCategory =
   | 'vocabulary'
   | 'grammar'
   | 'pronunciation'
@@ -41,16 +41,17 @@ export type AchievementCategory =
   | 'time'
   | 'level'
   | 'social'
-  | 'milestone';
+  | 'milestone'
+  | 'drama';
 
-export type AchievementRarity = 
+export type AchievementRarity =
   | 'common'
   | 'uncommon'
   | 'rare'
   | 'epic'
   | 'legendary';
 
-export type RequirementType = 
+export type RequirementType =
   | 'vocabulary_learned'
   | 'grammar_mastered'
   | 'pronunciation_score'
@@ -66,7 +67,7 @@ export type RequirementType =
   | 'drama_sentences'
   | 'habits_completed';
 
-export type CelebrationType = 
+export type CelebrationType =
   | 'simple'
   | 'confetti'
   | 'fireworks'

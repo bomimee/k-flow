@@ -10,8 +10,49 @@ from app.services.llm import analyze_transcript_with_llm, speech_to_text
 from app.schemas.youtube import YouTubeRequest
 import os
 from yt_dlp.utils import DownloadError
+from supabase import create_client, Client
+import requests
 
 router = APIRouter()
+
+url: str = os.getenv("SUPABASE_URL")
+key: str = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
+
+@router.get("/trending-youtube")
+def get_trending_youtube():
+    api_key = os.getenv("YOUTUBE_API_KEY")
+    if not api_key:
+        return [
+            {"title": "한국어 발음 연습하기 좋은 영상", "url": "https://www.youtube.com/watch?v=LIpyJY7QA1M", "thumbnail": "https://img.youtube.com/vi/LIpyJY7QA1M/mqdefault.jpg"},
+            {"title": "KBS News 유튜브 뉴스", "url": "https://www.youtube.com/watch?v=Gj972I5QamI", "thumbnail": "https://img.youtube.com/vi/Gj972I5QamI/mqdefault.jpg"},
+            {"title": "침착맨 - 일상 이야기", "url": "https://www.youtube.com/watch?v=KzVb3s89w1s", "thumbnail": "https://img.youtube.com/vi/KzVb3s89w1s/mqdefault.jpg"}
+        ]
+        
+    try:
+        url = "https://www.googleapis.com/youtube/v3/videos"
+        params = {
+            "part": "snippet",
+            "chart": "mostPopular",
+            "regionCode": "KR",
+            "maxResults": 10,
+            "key": api_key
+        }
+        res = requests.get(url, params=params)
+        data = res.json()
+        
+        videos = []
+        for item in data.get("items", []):
+            videos.append({
+                "title": item["snippet"]["title"],
+                "url": f"https://www.youtube.com/watch?v={item['id']}",
+                "thumbnail": item["snippet"]["thumbnails"]["medium"]["url"]
+            })
+        return videos
+    except Exception as e:
+        print("❌ 트렌딩 비디오 가져오기 실패:", e)
+        raise HTTPException(status_code=500, detail="인기 동영상을 가져오는데 실패했습니다.")
+
 
 @router.post("/analyze-youtube")
 def analyze_youtube(req: YouTubeRequest):
@@ -19,15 +60,28 @@ def analyze_youtube(req: YouTubeRequest):
     transcript = None
     source = None
     audio_file = None  # 오디오 파일 경로 저장용
+    is_cached = False
+
+    # 0️⃣ DB에서 먼저 확인 (캐싱)
+    try:
+        db_result = supabase.table("transcripts").select("*").eq("video_id", video_id).execute()
+        if db_result.data:
+            transcript = db_result.data[0]["transcript"]
+            source = db_result.data[0]["source"]
+            is_cached = True
+            print(f"✅ DB에서 자막 가져옴 (source: {source})")
+    except Exception as e:
+        print("❌ DB 조회 실패:", e)
 
     # 1️⃣ 자막 먼저 시도
-    try:
-        transcript = get_korean_transcript(video_id)
-        if transcript:
-            source = "subtitle"
-            print("✅ 자막 사용")
-    except Exception as e:
-        print("❌ 자막 가져오기 실패:", e)
+    if not transcript:
+        try:
+            transcript = get_korean_transcript(video_id)
+            if transcript:
+                source = "subtitle"
+                print("✅ 자막 사용")
+        except Exception as e:
+            print("❌ 자막 가져오기 실패:", e)
 
     # 2️⃣ 자막 없으면 STT
     if not transcript:
@@ -64,6 +118,18 @@ def analyze_youtube(req: YouTubeRequest):
             if audio_file and os.path.exists(audio_file):
                 os.remove(audio_file)
             raise HTTPException(status_code=500, detail="STT 처리 실패")
+
+    # [NEW] DB에 저장
+    if transcript and not is_cached:
+        try:
+            supabase.table("transcripts").insert({
+                "video_id": video_id,
+                "transcript": transcript,
+                "source": source
+            }).execute()
+            print("✅ DB에 자막 저장 완료")
+        except Exception as e:
+            print("❌ DB 자막 저장 실패:", e)
 
     # 3️⃣ LLM 분석
     try:

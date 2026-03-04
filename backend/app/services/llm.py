@@ -1,17 +1,17 @@
 import os
 import json
-from openai import OpenAI
+from google import genai
+from google.genai import types
 from app.core.prompts import YOUTUBE_ANALYSIS_PROMPT
 import whisper
 import re
 
-OPEN_API_KEY=""
-# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-client = OpenAI(api_key=OPEN_API_KEY)
+from dotenv import load_dotenv
+
+load_dotenv()
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 def analyze_transcript_with_llm(transcript: str, level: str) -> dict:
-    print(f"🧠 {transcript}")
-    print(level)
     prompt = f"""
     You are a Korean language teacher.
 
@@ -25,16 +25,16 @@ def analyze_transcript_with_llm(transcript: str, level: str) -> dict:
     {YOUTUBE_ANALYSIS_PROMPT}
     """
 
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "You are a helpful language tutor."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.4
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction="You are a helpful language tutor.",
+            temperature=0.4,
+        ),
     )
 
-    content = response.choices[0].message.content
+    content = response.text
     # 이후 JSON 파싱
     cleaned = extract_json(content)
 

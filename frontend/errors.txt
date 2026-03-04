@@ -1,0 +1,8 @@
+﻿app/components/HabitFormationDashboard.tsx(4,3): error TS2305: Module '"@/app/types/behavior"' has no exported member 'HabitFormation'.
+app/components/HabitFormationDashboard.tsx(5,3): error TS2305: Module '"@/app/types/behavior"' has no exported member 'MicroHabit'.
+app/components/HabitFormationDashboard.tsx(6,3): error TS2305: Module '"@/app/types/behavior"' has no exported member 'BehaviorDesign'.
+app/curriculum/page.tsx(127,11): error TS2322: Type 'number' is not assignable to type 'TTMIKLevel'.
+app/curriculum/page.tsx(128,11): error TS2322: Type 'number' is not assignable to type 'TTMIKLevel'.
+app/result/page.tsx(253,9): error TS2820: Type '"Grammar"' is not assignable to type '"grammar" | "pronunciation" | "usage" | "formality"'. Did you mean '"grammar"'?
+app/types/achievement.ts(384,5): error TS2322: Type '"drama"' is not assignable to type 'AchievementCategory'.
+app/types/achievement.ts(398,5): error TS2322: Type '"drama"' is not assignable to type 'AchievementCategory'.

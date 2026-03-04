@@ -39,7 +39,10 @@ export function AudioButton({
     if ("speechSynthesis" in window) {
       window.speechSynthesis.cancel();
 
-      const utterance = new SpeechSynthesisUtterance(text);
+      // Remove tilde (~) to prevent TTS from reading it aloud as "물결표"
+      const sanitizedText = text.replace(/~/g, '').trim();
+
+      const utterance = new SpeechSynthesisUtterance(sanitizedText);
       utterance.lang = "ko-KR";
       utterance.rate = 0.9;
 
@@ -93,17 +96,16 @@ export function AudioButton({
     <>
       <button
         onClick={handlePlay}
-        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg transition ${className} ${
-          isPlaying
+        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg transition ${className} ${isPlaying
             ? "bg-blue-600 text-white"
             : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-        }`}
+          }`}
         title={
           audioClipUrl
             ? "Play original audio clip"
             : timestamp
-            ? "Play from YouTube video"
-            : "Play pronunciation (TTS)"
+              ? "Play from YouTube video"
+              : "Play pronunciation (TTS)"
         }
       >
         {isPlaying ? (
@@ -126,8 +128,8 @@ export function AudioButton({
               {audioClipUrl
                 ? "🎵 Original"
                 : timestamp
-                ? "▶️ YouTube"
-                : "🔊 Listen"}
+                  ? "▶️ YouTube"
+                  : "🔊 Listen"}
             </span>
           </>
         )}

@@ -20,7 +20,7 @@ export default function CurriculumPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <ModernNavigation />
-        
+
         <main className="max-w-4xl mx-auto px-6 py-12">
           <div className="text-center mb-12">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -40,10 +40,10 @@ export default function CurriculumPage() {
                 </label>
                 <select
                   value={roadmapConfig.currentLevel}
-                  onChange={(e) => setRoadmapConfig({...roadmapConfig, currentLevel: parseInt(e.target.value)})}
+                  onChange={(e) => setRoadmapConfig({ ...roadmapConfig, currentLevel: parseInt(e.target.value) })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  {[1,2,3,4,5,6,7,8,9,10].map(level => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                     <option key={level} value={level}>TTMIK Level {level}</option>
                   ))}
                 </select>
@@ -56,10 +56,10 @@ export default function CurriculumPage() {
                 </label>
                 <select
                   value={roadmapConfig.targetLevel}
-                  onChange={(e) => setRoadmapConfig({...roadmapConfig, targetLevel: parseInt(e.target.value)})}
+                  onChange={(e) => setRoadmapConfig({ ...roadmapConfig, targetLevel: parseInt(e.target.value) })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
-                  {[1,2,3,4,5,6,7,8,9,10].map(level => (
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => (
                     <option key={level} value={level} disabled={level <= roadmapConfig.currentLevel}>
                       TTMIK Level {level}
                     </option>
@@ -74,7 +74,7 @@ export default function CurriculumPage() {
                 </label>
                 <select
                   value={roadmapConfig.timeframe}
-                  onChange={(e) => setRoadmapConfig({...roadmapConfig, timeframe: parseInt(e.target.value)})}
+                  onChange={(e) => setRoadmapConfig({ ...roadmapConfig, timeframe: parseInt(e.target.value) })}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value={4}>4 weeks (Intensive)</option>
@@ -112,7 +112,7 @@ export default function CurriculumPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <ModernNavigation />
-      
+
       <main className="max-w-6xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
@@ -124,8 +124,8 @@ export default function CurriculumPage() {
         </div>
 
         <CurriculumRoadmap
-          currentLevel={roadmapConfig.currentLevel}
-          targetLevel={roadmapConfig.targetLevel}
+          currentLevel={roadmapConfig.currentLevel as any}
+          targetLevel={roadmapConfig.targetLevel as any}
           timeframe={roadmapConfig.timeframe}
         />
       </main>

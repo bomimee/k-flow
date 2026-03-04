@@ -43,6 +43,13 @@ export default function ModernNavigation() {
       isNew: true
     },
     {
+      name: 'My Saved Items',
+      href: '/saved-items',
+      icon: '🔖',
+      description: 'Review saved expressions',
+      isNew: true
+    },
+    {
       name: 'SRS Study',
       href: '/srs-study',
       icon: '🧠',
@@ -50,10 +57,10 @@ export default function ModernNavigation() {
       isNew: true
     },
     {
-      name: 'Drama Practice',
+      name: 'Youtube Practice',
       href: '/drama-practice',
       icon: '🎬',
-      description: 'Learn with K-dramas',
+      description: 'Learn with K-contents',
       badge: 'HOT',
       isNew: true
     },
@@ -88,7 +95,7 @@ export default function ModernNavigation() {
           <div className="grid grid-cols-3 items-center h-20">
             {/* Left: Logo */}
             <div className="flex items-center justify-start space-x-3">
-              <div className="w-10 h-10 bg-gradient-primary rounded-xl flex items-center justify-center">
+              <div className="w-15 h-15 bg-gradient-primary rounded-xl flex items-center justify-center">
                 <Link href="/" className="text-white text-xl font-bold">K</Link>
               </div>
               <div>

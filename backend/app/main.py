@@ -2,6 +2,7 @@
 from fastapi import FastAPI
 from app.api.youtube import router as youtube_router
 from app.api.vocabulary import router as vocabulary_router
+from app.api.saved_items import router as saved_items_router
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
@@ -29,6 +30,7 @@ from app.api.srs import router as srs_router
 app.include_router(youtube_router, prefix="/api", tags=["YouTube"])
 app.include_router(vocabulary_router, prefix="/api", tags=["Vocabulary"])
 app.include_router(srs_router, prefix="/api", tags=["SRS"])
+app.include_router(saved_items_router, prefix="/api", tags=["Saved Items"])
 @app.get("/")
 def read_root():
     return {"message": "Korean Learning API is running"}

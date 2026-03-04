@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import type { AnalysisResult } from "@/app/types/analysis";
 import { AudioButton } from "./AudioButton";
+import { SaveItemButton } from "./SaveItemButton";
+import { getSavedItems } from "../services/savedItems";
 
 interface ResultResponseProps {
   result: AnalysisResult;
@@ -13,6 +15,20 @@ export default function ResultResponse({ result }: ResultResponseProps) {
   const [activeTab, setActiveTab] = useState<
     "overview" | "expressions" | "grammar" | "vocabulary" | "practice"
   >("overview");
+  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const fetchSaved = async () => {
+      try {
+        const items = await getSavedItems();
+        const keys = new Set(items.map((i: any) => i.unique_key));
+        setSavedKeys(keys as Set<string>);
+      } catch (err) {
+        console.error("Failed to fetch saved items", err);
+      }
+    };
+    fetchSaved();
+  }, []);
 
   return (
     <div className="space-y-8 text-black">
@@ -93,11 +109,10 @@ export default function ResultResponse({ result }: ResultResponseProps) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 font-medium whitespace-nowrap transition ${
-              activeTab === tab.id
-                ? "text-blue-600 border-b-2 border-blue-600"
-                : "text-gray-600 hover:text-blue-600"
-            }`}
+            className={`px-4 py-2 font-medium whitespace-nowrap transition ${activeTab === tab.id
+              ? "text-blue-600 border-b-2 border-blue-600"
+              : "text-gray-600 hover:text-blue-600"
+              }`}
           >
             {tab.label}
           </button>
@@ -147,7 +162,7 @@ export default function ResultResponse({ result }: ResultResponseProps) {
         </section>
       )}
 
-     {activeTab === 'expressions' && (
+      {activeTab === 'expressions' && (
         <section className="space-y-6">
           <h3 className="text-2xl font-bold">📌 Key Expressions</h3>
           <div className="space-y-4">
@@ -160,9 +175,9 @@ export default function ResultResponse({ result }: ResultResponseProps) {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <p className="text-2xl font-bold text-gray-900">{item.expression}</p>
-                      
+
                       {/* 👇 AudioButton 사용 */}
-                      <AudioButton 
+                      <AudioButton
                         text={item.expression}
                         audioClipUrl={item.audio_clip_url}
                         timestamp={item.audio_timestamp}
@@ -171,14 +186,21 @@ export default function ResultResponse({ result }: ResultResponseProps) {
                     </div>
                     <p className="text-sm text-gray-500">[{item.pronunciation}]</p>
                   </div>
-                  
-                  <span className={`px-3 py-1 text-xs rounded-full ${
-                    item.formality === 'formal' ? 'bg-blue-100 text-blue-700' :
+
+                  <span className={`px-3 py-1 text-xs rounded-full ${item.formality === 'formal' ? 'bg-blue-100 text-blue-700' :
                     item.formality === 'casual' ? 'bg-orange-100 text-orange-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
+                      'bg-gray-100 text-gray-700'
+                    }`}>
                     {item.formality}
                   </span>
+
+                  <SaveItemButton
+                    itemType="expression"
+                    uniqueKey={`expression:${item.expression}`}
+                    isInitiallySaved={savedKeys.has(`expression:${item.expression}`)}
+                    content={{ ...item, source: source, video_id: video_id }}
+                    className="ml-2"
+                  />
                 </div>
 
                 <p className="text-lg text-gray-700 mb-2">
@@ -270,16 +292,22 @@ export default function ResultResponse({ result }: ResultResponseProps) {
                     {g.pattern}
                   </p>
                   <span
-                    className={`px-3 py-1 text-xs rounded-full ${
-                      g.level === "beginner"
-                        ? "bg-green-100 text-green-700"
-                        : g.level === "intermediate"
+                    className={`px-3 py-1 text-xs rounded-full ${g.level === "beginner"
+                      ? "bg-green-100 text-green-700"
+                      : g.level === "intermediate"
                         ? "bg-yellow-100 text-yellow-700"
                         : "bg-red-100 text-red-700"
-                    }`}
+                      }`}
                   >
                     {g.level}
                   </span>
+                  <SaveItemButton
+                    itemType="grammar"
+                    uniqueKey={`grammar:${g.pattern}`}
+                    isInitiallySaved={savedKeys.has(`grammar:${g.pattern}`)}
+                    content={{ ...g, source: source, video_id: video_id }}
+                    className="ml-2"
+                  />
                 </div>
 
                 <p className="text-gray-700 mb-3">{g.explanation_en}</p>
@@ -400,8 +428,18 @@ export default function ResultResponse({ result }: ResultResponseProps) {
                         key={idx}
                         className="p-3 bg-gray-50 rounded hover:bg-gray-100 transition"
                       >
-                        <p className="font-semibold text-lg">{item.word}</p>
-                        <p className="text-gray-700">{item.meaning}</p>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-lg">{item.word}</p>
+                            <p className="text-gray-700">{item.meaning}</p>
+                          </div>
+                          <SaveItemButton
+                            itemType="vocabulary"
+                            uniqueKey={`vocabulary:${item.word}`}
+                            isInitiallySaved={savedKeys.has(`vocabulary:${item.word}`)}
+                            content={{ ...item, category: category, source: source, video_id: video_id }}
+                          />
+                        </div>
                         {item.conjugation_tip && (
                           <p className="text-sm text-blue-600 mt-1">
                             💡 {item.conjugation_tip}
