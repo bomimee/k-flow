@@ -1,4 +1,122 @@
 import { useState, useEffect, useCallback } from 'react';
+
+// ── Korean morphology helpers ─────────────────────────────────────────────────
+
+/**
+ * Extract the verb/adjective stem from a Korean dictionary form.
+ * e.g. "다르다" → "다르", "먹다" → "먹", "아름답다" → "아름답"
+ */
+function koreanStem(word: string): string {
+  // Remove 다 ending (dictionary form)
+  if (word.endsWith('다')) return word.slice(0, -1);
+  return word;
+}
+
+/**
+ * Convert irregular stems for comparison.
+ * Handles the most common irregular patterns:
+ *  르 irregular: 다르 → 달 (달라요, 달랐다…)
+ *  ㅂ irregular: 아름답 → 아름다 (아름다워요…)
+ *  ㄷ irregular: 걷 → 걸 (걸어요…)
+ */
+function normalizeStem(stem: string): string {
+  // 르 irregular: 다르 → 달
+  if (stem.endsWith('르')) return stem.slice(0, -1) + '달'[0]; // 다르 → 다 + ㄹ pattern
+  return stem;
+}
+
+/**
+ * Check whether a user's answer is morphologically related to the correct Korean word.
+ * Strategy:
+ *  1. Exact match (after trimming / lowercasing)
+ *  2. Both start with the same stem (≥2 chars)
+ *  3. The input is at least 2 chars and the correct answer starts with the input
+ *  4. 르-irregular: 달- prefix check for 다르다 family
+ */
+function isMorphologicallyCorrect(userInput: string, correctWord: string): boolean {
+  const u = userInput.trim();
+  const c = correctWord.trim();
+  if (!u || !c) return false;
+
+  // 1. Exact
+  if (u === c) return true;
+
+  const uStem = koreanStem(u);   // user may type 먹어 → stem = 먹어 (no 다)
+  const cStem = koreanStem(c);   // 먹다 → 먹
+
+  // 2. Correct stem starts with user stem (user typed stem)
+  if (cStem.length >= 2 && u.startsWith(cStem)) return true;
+  if (uStem.length >= 2 && cStem.startsWith(uStem)) return true;
+
+  // 3. Both share at least a 2-char prefix stem
+  const minLen = Math.min(cStem.length, uStem.length);
+  if (minLen >= 2 && cStem.slice(0, minLen) === uStem.slice(0, minLen)) return true;
+
+  // 4. 르 irregular: 다르다 → 달*  /  모르다 → 몰*
+  if (cStem.endsWith('르')) {
+    const base = cStem.slice(0, -1); // 다
+    // 달, 달라, 달랐 …
+    const irregularBase = base + '달'[0]; // rough: same first char + ㄹ
+    // Simpler: check if user answer starts with base+'ㄹ' glyph — use string prefix trick
+    // "다르다" irregular conjugates start with the vowel before 르 + ㄹ
+    // e.g. 다르 → 달*, 모르 → 몰*, 부르 → 불*
+    const vowelChar = cStem[cStem.length - 2]; // char before 르
+    // Build expected irregular prefix: take all chars before 르, last char loses 받침
+    // This is complex; use a simpler heuristic: the user answer starts with
+    // the same chars as the stem minus the last syllable + ㄹ-family
+    if (cStem.length >= 2) {
+      const prefix = cStem.slice(0, -2); // chars before the vowel+르
+      if (prefix && u.startsWith(prefix)) return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Find the conjugated form of a Korean word appearing in a sentence.
+ * Returns { matched: string, sentence: string with ___ } or null.
+ */
+function findKoreanWordInSentence(
+  sentence: string,
+  dictForm: string
+): { matched: string; blankedSentence: string } | null {
+  // 1. Direct match first
+  if (sentence.includes(dictForm)) {
+    return {
+      matched: dictForm,
+      blankedSentence: sentence.replace(dictForm, '___'),
+    };
+  }
+
+  // 2. Try matching by stem prefix (2–N chars)
+  const stem = koreanStem(dictForm);
+
+  // Split sentence into Korean word tokens (keep punctuation attached for replacement)
+  const tokens = sentence.match(/[가-힣]+[.!?,]?/g) || [];
+
+  for (const token of tokens) {
+    const word = token.replace(/[.!?,]$/, '');
+    if (word.length >= 2 && word.startsWith(stem.slice(0, 2))) {
+      return {
+        matched: token,
+        blankedSentence: sentence.replace(token, '___'),
+      };
+    }
+    // 르 irregular: 다르다 → 달라요 etc.
+    if (stem.endsWith('르') && stem.length >= 2) {
+      const base = stem.slice(0, -2); // before the X+르
+      if (base && word.startsWith(base)) {
+        return {
+          matched: token,
+          blankedSentence: sentence.replace(token, '___'),
+        };
+      }
+    }
+  }
+
+  return null;
+}
 import type {
   VocabularyItem,
   QuizQuestion,
@@ -8,7 +126,8 @@ import type {
   QuizMode,
   QuizModeConfig
 } from '@/app/types/vocabulary';
-import { fetchVocabulary } from '@/app/services/vocabulary';
+import { fetchMixedQuizWords } from '@/app/services/vocabulary';
+import { useAuth } from '@/app/hooks/useAuth';
 
 interface VocabularyQuizProps {
   mode: QuizMode;
@@ -17,6 +136,7 @@ interface VocabularyQuizProps {
 }
 
 export default function VocabularyQuiz({ mode, config, onQuizComplete }: VocabularyQuizProps) {
+  const { user } = useAuth();
   const [session, setSession] = useState<QuizSession | null>(null);
   const [currentQuestion, setCurrentQuestion] = useState<QuizQuestion | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
@@ -26,21 +146,26 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
   const [questionStartTime, setQuestionStartTime] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [vocabulary, setVocabulary] = useState<VocabularyItem[]>([]);
+  const [savedWordCount, setSavedWordCount] = useState(0);
 
   useEffect(() => {
     async function loadQuiz() {
       try {
         setIsLoading(true);
-        // We use the level from config if available, otherwise default to level 1 for now
-        const level = config.levelRange ? config.levelRange[0] : 1;
-        const fetchedVocab = await fetchVocabulary(level, config.categories, config.questionCount);
+        const result = await fetchMixedQuizWords({
+          userId: user?.id,
+          level: config.levelRange ? config.levelRange[0] : 1,
+          categories: config.categories,
+          limit: config.questionCount,
+        });
+
+        const fetchedVocab = result.items;
+        setSavedWordCount(result.saved_count);
 
         if (fetchedVocab.length === 0) {
           throw new Error('No vocabulary found for this level.');
         }
 
-        setVocabulary(fetchedVocab);
         initializeQuiz(fetchedVocab);
         setIsLoading(false);
       } catch (err) {
@@ -144,15 +269,23 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
 
   const createSentenceFillQuestion = (vocab: VocabularyItem): QuizQuestion => {
     const exampleSentence = vocab.exampleSentence || '';
-    const sentence = exampleSentence.replace(vocab.korean, '___');
+
+    // Try to find the conjugated (or base) form in the example sentence
+    const found = findKoreanWordInSentence(exampleSentence, vocab.korean);
+    const blankedSentence = found ? found.blankedSentence : exampleSentence + ' (___)';
+    const matchedForm = found ? found.matched.replace(/[.!?,]$/, '') : vocab.korean;
 
     return {
       id: `sf-${vocab.id}`,
       type: 'sentence-fill',
       vocabulary: vocab,
-      question: `Fill in the blank: "${sentence}"`,
+      question: `Fill in the blank: "${blankedSentence}"`,
+      // Store both: correctAnswer = dictionary form, acceptedForm = what actually appears
       correctAnswer: vocab.korean,
-      explanation: `The correct word is "${vocab.korean}" meaning "${vocab.meaning}". Translation: "${vocab.exampleTranslation}"`,
+      // Used for display hint in explanation
+      explanation: `The correct word is "${vocab.korean}" meaning "${vocab.meaning}". ` +
+        (matchedForm !== vocab.korean ? `"${matchedForm}" is also accepted (conjugated form). ` : '') +
+        `Translation: "${vocab.exampleTranslation}"`,
       points: vocab.difficulty === 'easy' ? 15 : vocab.difficulty === 'medium' ? 25 : 35,
       timeLimit: 25
     };
@@ -162,7 +295,11 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
     if (!session || !currentQuestion || !selectedAnswer) return;
 
     const timeSpent = Math.floor((Date.now() - questionStartTime) / 1000);
-    const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
+
+    // For sentence-fill, accept morphological variants (활용형)
+    const isCorrect = currentQuestion.type === 'sentence-fill'
+      ? isMorphologicallyCorrect(selectedAnswer, currentQuestion.correctAnswer)
+      : selectedAnswer === currentQuestion.correctAnswer;
     const points = isCorrect ? currentQuestion.points : 0;
 
     const answer: QuizAnswer = {
@@ -412,17 +549,25 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
                 disabled={showResult}
                 placeholder="Type your answer here..."
                 className={`w-full p-4 border-2 rounded-lg text-lg ${showResult
-                  ? selectedAnswer === currentQuestion.correctAnswer
+                  ? isMorphologicallyCorrect(selectedAnswer, currentQuestion.correctAnswer)
                     ? 'border-green-500 bg-green-50'
                     : 'border-red-500 bg-red-50'
                   : 'border-gray-300 focus:border-[var(--background)]'
                   }`}
               />
               {showResult && (
-                <div className="text-center">
-                  <span className="text-green-600 font-semibold">
-                    Correct: {currentQuestion.correctAnswer}
-                  </span>
+                <div className="text-center space-y-1">
+                  {isMorphologicallyCorrect(selectedAnswer, currentQuestion.correctAnswer) ? (
+                    <span className="text-green-600 font-semibold">✅ 정답! ({selectedAnswer})</span>
+                  ) : (
+                    <>
+                      <span className="text-red-500 font-semibold">❌ 오답</span>
+                      <p className="text-sm text-gray-600">
+                        정답: <strong>{currentQuestion.correctAnswer}</strong>
+                        &nbsp;— 활용형도 정답이에요 (예: 달라요, 다르지, 다르면…)
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
             </div>

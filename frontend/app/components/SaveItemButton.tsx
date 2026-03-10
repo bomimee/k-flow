@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { saveItem, SavedItem } from '../services/savedItems';
+import { useAuth } from '../hooks/useAuth';
 
 interface SaveItemButtonProps {
     itemType: 'vocabulary' | 'expression' | 'grammar';
@@ -12,17 +13,20 @@ interface SaveItemButtonProps {
 }
 
 export function SaveItemButton({ itemType, content, uniqueKey, isInitiallySaved = false, className = '' }: SaveItemButtonProps) {
+    const { user } = useAuth();
     const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>(isInitiallySaved ? 'saved' : 'idle');
 
     const handleSave = async () => {
         if (status === 'saving' || status === 'saved') return;
 
         setStatus('saving');
+        // Use actual user id — falls back to 'default_user' only when not signed in
+        const userId = user?.id || 'default_user';
         const success = await saveItem({
             item_type: itemType,
             unique_key: uniqueKey,
             content: content,
-        });
+        }, userId);
 
         if (success) {
             setStatus('saved');

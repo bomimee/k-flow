@@ -3,13 +3,29 @@
 import ModernNavigation from "@/app/components/ModernNavigation";
 import LevelAssessment from "@/app/components/LevelAssessment";
 import { useState } from "react";
+import { useAuth } from "@/app/hooks/useAuth";
 
 export default function LevelAssessmentPage() {
   const [assessmentComplete, setAssessmentComplete] = useState(false);
   const [userLevel, setUserLevel] = useState<number | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const { user, updateUserMetadata } = useAuth(); // ADDED: Auth hook context
 
-  const handleLevelDetermined = (level: number) => {
+  const handleLevelDetermined = async (level: number) => {
     setUserLevel(level);
+    
+    // Save to user metadata if logged in
+    if (user) {
+      setIsSaving(true);
+      try {
+        await updateUserMetadata({ level: level });
+      } catch (err) {
+        console.error("Failed to save level:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    }
+    
     setAssessmentComplete(true);
   };
 

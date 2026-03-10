@@ -5,7 +5,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000' 
 export async function fetchDueItems(userId: string): Promise<VocabularyItem[]> {
     try {
         const response = await fetch(`${API_BASE_URL}/api/srs/due/${userId}`);
-        if (!response.ok) throw new Error('Failed to fetch due items');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+            throw new Error(`Failed to fetch due items: ${errorData.detail || response.statusText}`);
+        }
 
         const data = await response.json();
 

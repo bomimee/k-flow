@@ -11,8 +11,9 @@ load_dotenv()
 router = APIRouter()
 
 url: str = os.getenv("SUPABASE_URL")
-key: str = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(url, key)
+# Use service_role key on the backend to bypass RLS — server is trusted
+service_key: str = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(url, service_key)
 
 class SRSProgressUpdate(BaseModel):
     vocabulary_id: str

@@ -12,7 +12,7 @@ export default function VocabularyQuizPage() {
     questionCount: 10,
     difficulty: 'mixed' as const,
     categories: ['all'],
-    level: 1
+    level: 1,
   });
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
 
@@ -287,7 +287,7 @@ export default function VocabularyQuizPage() {
             questionCount: quizConfig.questionCount,
             difficulty: quizConfig.difficulty,
             categories: quizConfig.categories,
-            levelRange: [quizConfig.level, quizConfig.level]
+            levelRange: [quizConfig.level, quizConfig.level],
           }}
           onQuizComplete={handleQuizComplete}
         />

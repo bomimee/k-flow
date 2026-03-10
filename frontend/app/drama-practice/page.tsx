@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import type { VideoClip, MemorizationSession } from "@/app/types/drama";
 import type { AnalysisResult } from "@/app/types/analysis";
 import { analyzeYouTube, mapAnalysisToVideoClip } from "@/app/services/youtube";
+import { useAuth } from "@/app/hooks/useAuth";
 
 export default function DramaPracticePage() {
   const [showWelcome, setShowWelcome] = useState(true);
@@ -20,6 +21,18 @@ export default function DramaPracticePage() {
   const [showPractice, setShowPractice] = useState(false);
   const [trendingVideos, setTrendingVideos] = useState<any[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
+
+  const { user } = useAuth(); // ADDED: Auth hook to fetch user info for automatic level setting
+
+  useEffect(() => {
+    // Automatically set level based on user metadata
+    if (user?.user_metadata?.level) {
+      const uLevel = user.user_metadata.level;
+      if (uLevel >= 8) setLevel("advanced");
+      else if (uLevel >= 4) setLevel("intermediate");
+      else setLevel("beginner");
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchTrending = async () => {

@@ -1,444 +1,510 @@
-import { useState, useEffect } from 'react';
-import type {
-  Behavior,
-  HabitFormation,
-  MicroHabit,
-  BehaviorDesign,
-  BehaviorCategory
-} from '@/app/services/behaviorModel';
+"use client";
+
+import { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/app/hooks/useAuth';
 import { BehaviorModel } from '@/app/services/behaviorModel';
+import {
+    fetchHabits,
+    createHabit,
+    completeHabit,
+    updateHabitFields,
+    deleteHabit,
+    type HabitData,
+    type HabitStats,
+} from '@/app/services/habits';
+import type { Behavior } from '@/app/types/behavior';
 
 interface HabitFormationDashboardProps {
-  onBehaviorUpdate: (behaviors: Behavior[]) => void;
+    onBehaviorUpdate: (behaviors: Behavior[]) => void;
 }
 
-export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitFormationDashboardProps) {
-  const [behaviors, setBehaviors] = useState<Behavior[]>([]);
-  const [habitFormation, setHabitFormation] = useState<HabitFormation | null>(null);
-  const [selectedBehavior, setSelectedBehavior] = useState<Behavior | null>(null);
-  const [microHabits, setMicroHabits] = useState<MicroHabit[]>([]);
-  const [showDesignWizard, setShowDesignWizard] = useState(false);
+const CATEGORIES = ['vocabulary', 'grammar', 'speaking', 'listening', 'reading'] as const;
+type Category = typeof CATEGORIES[number];
 
-  useEffect(() => {
-    initializeBehaviors();
-  }, []);
+const CATEGORY_COLORS: Record<string, string> = {
+    vocabulary: 'bg-blue-100 text-blue-700',
+    grammar: 'bg-purple-100 text-purple-700',
+    speaking: 'bg-green-100 text-green-700',
+    listening: 'bg-orange-100 text-orange-700',
+    reading: 'bg-pink-100 text-pink-700',
+};
 
-  useEffect(() => {
-    if (behaviors.length > 0) {
-      updateHabitFormation();
-    }
-  }, [behaviors]);
+function getBehaviorScore(motivation: number, ability: number, promptEnabled: boolean) {
+    return BehaviorModel.calculateBehaviorScore(motivation, ability, promptEnabled ? 10 : 0);
+}
 
-  const initializeBehaviors = () => {
-    const defaultBehaviors: Behavior[] = [
-      {
-        id: 'vocab-daily',
-        name: 'Daily Vocabulary Review',
-        description: 'Review 10 vocabulary words using spaced repetition',
-        motivation: 7,
-        ability: 8,
-        prompt: {
-          type: 'time',
-          trigger: '9:00 AM',
-          cue: 'Time for your daily vocabulary review!',
-          isEnabled: true
-        },
-        category: 'vocabulary',
-        rewards: [
-          {
-            type: 'intrinsic',
-            description: 'Sense of accomplishment',
-            points: 10,
-            isImmediate: true
-          },
-          {
-            type: 'extrinsic',
-            description: 'XP points',
-            points: 50,
-            isImmediate: true
-          }
-        ],
-        streak: 3,
-        frequency: 'daily'
-      },
-      {
-        id: 'drama-practice',
-        name: 'K-Drama Sentence Practice',
-        description: 'Practice 5 sentences from K-drama clips',
-        motivation: 8,
-        ability: 6,
-        prompt: {
-          type: 'context',
-          trigger: 'evening relaxation',
-          cue: 'Relax and learn with K-drama practice!',
-          isEnabled: true
-        },
-        category: 'speaking',
-        rewards: [
-          {
-            type: 'intrinsic',
-            description: 'Improved pronunciation',
-            points: 15,
-            isImmediate: false
-          }
-        ],
-        streak: 1,
-        frequency: 'daily'
-      },
-      {
-        id: 'grammar-review',
-        name: 'Weekly Grammar Review',
-        description: 'Review and practice grammar points from the week',
-        motivation: 5,
-        ability: 7,
-        prompt: {
-          type: 'time',
-          trigger: 'Sunday 7:00 PM',
-          cue: 'Time for your weekly grammar review!',
-          isEnabled: true
-        },
-        category: 'grammar',
-        rewards: [
-          {
-            type: 'extrinsic',
-            description: 'Grammar mastery badge',
-            points: 100,
-            isImmediate: false
-          }
-        ],
-        streak: 0,
-        frequency: 'weekly'
-      }
-    ];
-
-    setBehaviors(defaultBehaviors);
-  };
-
-  const updateHabitFormation = () => {
-    const completedBehaviors = behaviors.filter(b => b.lastCompleted);
-    const totalCompleted = behaviors.reduce((sum, b) => sum + b.streak, 0);
-
-    const formation: HabitFormation = {
-      behaviors,
-      currentStreak: Math.max(...behaviors.map(b => b.streak)),
-      longestStreak: Math.max(...behaviors.map(b => b.streak)),
-      totalBehaviorsCompleted: totalCompleted,
-      completionRate: completedBehaviors.length / behaviors.length,
-      motivationLevel: behaviors.reduce((sum, b) => sum + b.motivation, 0) / behaviors.length,
-      lastActiveDate: new Date()
-    };
-
-    setHabitFormation(formation);
-  };
-
-  const handleBehaviorComplete = (behaviorId: string) => {
-    const updatedBehaviors = behaviors.map(behavior => {
-      if (behavior.id === behaviorId) {
-        return {
-          ...behavior,
-          streak: behavior.streak + 1,
-          lastCompleted: new Date()
-        };
-      }
-      return behavior;
-    });
-
-    setBehaviors(updatedBehaviors);
-    onBehaviorUpdate(updatedBehaviors);
-  };
-
-  const handleMotivationChange = (behaviorId: string, newMotivation: number) => {
-    const updatedBehaviors = behaviors.map(behavior => {
-      if (behavior.id === behaviorId) {
-        return { ...behavior, motivation: newMotivation };
-      }
-      return behavior;
-    });
-
-    setBehaviors(updatedBehaviors);
-  };
-
-  const handleAbilityChange = (behaviorId: string, newAbility: number) => {
-    const updatedBehaviors = behaviors.map(behavior => {
-      if (behavior.id === behaviorId) {
-        return { ...behavior, ability: newAbility };
-      }
-      return behavior;
-    });
-
-    setBehaviors(updatedBehaviors);
-  };
-
-  const getBehaviorScore = (behavior: Behavior): number => {
-    return BehaviorModel.calculateBehaviorScore(
-      behavior.motivation,
-      behavior.ability,
-      behavior.prompt.isEnabled ? 10 : 0
-    );
-  };
-
-  const getBehaviorColor = (score: number): string => {
+function getBehaviorColor(score: number) {
     if (score >= 7) return 'text-green-600';
     if (score >= 4) return 'text-yellow-600';
     return 'text-red-600';
-  };
+}
 
-  const getMicroHabitsForBehavior = (behaviorId: string): MicroHabit[] => {
-    const behavior = behaviors.find(b => b.id === behaviorId);
-    if (!behavior) return [];
+// ── Add Habit Modal ──────────────────────────────────────────────────────────
+interface AddHabitModalProps {
+    onClose: () => void;
+    onSave: (data: {
+        name: string; description: string; category: string;
+        frequency: string; motivation: number; ability: number;
+        prompt_cue: string;
+    }) => Promise<void>;
+}
 
-    return BehaviorModel.createMicroHabits(behavior);
-  };
+function AddHabitModal({ onClose, onSave }: AddHabitModalProps) {
+    const [form, setForm] = useState({
+        name: '', description: '', category: 'vocabulary',
+        frequency: 'daily', motivation: 5, ability: 5, prompt_cue: ''
+    });
+    const [saving, setSaving] = useState(false);
 
-  if (!habitFormation) {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try { await onSave(form); onClose(); }
+        finally { setSaving(false); }
+    };
+
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-pulse">
-          <div className="w-16 h-16 border-4 border-[var(--background)] border-t-transparent rounded-full"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const analysis = BehaviorModel.calculateHabitFormation(behaviors);
-
-  return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <h2 className="text-3xl font-bold mb-4">🎯 Habit Formation Dashboard</h2>
-        <p className="text-gray-600">Build sustainable Korean learning habits using the BJ Fogg Behavior Model</p>
-      </div>
-
-      {/* Overall Progress */}
-      <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-black p-6 rounded-lg">
-        <h3 className="text-xl font-bold mb-4">Overall Progress</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="text-center">
-            <p className="text-3xl font-bold">{analysis.formationScore}%</p>
-            <p className="text-sm opacity-90">Formation</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold">{analysis.consistencyScore}%</p>
-            <p className="text-sm opacity-90">Consistency</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold">{analysis.automaticityScore}%</p>
-            <p className="text-sm opacity-90">Automaticity</p>
-          </div>
-          <div className="text-center">
-            <p className="text-3xl font-bold">{habitFormation.currentStreak}</p>
-            <p className="text-sm opacity-90">Current Streak</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Recommendations */}
-      {analysis.recommendations.length > 0 && (
-        <div className="bg-[var(--lemon)] p-6 rounded-lg">
-          <h3 className="text-xl font-bold mb-4 text-black">💡 Recommendations</h3>
-          <ul className="space-y-2">
-            {analysis.recommendations.map((rec, index) => (
-              <li key={index} className="flex items-start">
-                <span className="text-black mr-2">•</span>
-                <span className="text-black">{rec}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Behaviors List */}
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold">🎯 Active Behaviors</h3>
-          <button
-            onClick={() => setShowDesignWizard(true)}
-            className="bg-[var(--background)] text-white px-4 py-2 rounded-lg font-medium hover:bg-[var(--lightblue)] transition-colors"
-          >
-            + Add Behavior
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {behaviors.map(behavior => {
-            const score = getBehaviorScore(behavior);
-            const willOccur = BehaviorModel.willBehaviorOccur(
-              behavior.motivation,
-              behavior.ability,
-              behavior.prompt.isEnabled ? 10 : 0
-            );
-
-            return (
-              <div
-                key={behavior.id}
-                className={`border-2 rounded-lg p-4 transition-all duration-200 ${selectedBehavior?.id === behavior.id
-                  ? 'border-[var(--background)] bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                onClick={() => setSelectedBehavior(behavior)}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex-1">
-                    <h4 className="text-lg font-semibold mb-2">{behavior.name}</h4>
-                    <p className="text-gray-600 text-sm mb-3">{behavior.description}</p>
-
-                    <div className="flex items-center space-x-4 text-sm">
-                      <span className={`px-2 py-1 rounded font-medium ${behavior.category === 'vocabulary' ? 'bg-blue-100 text-blue-700' :
-                        behavior.category === 'grammar' ? 'bg-purple-100 text-purple-700' :
-                          behavior.category === 'speaking' ? 'bg-green-100 text-green-700' :
-                            behavior.category === 'listening' ? 'bg-orange-100 text-orange-700' :
-                              'bg-gray-100 text-gray-700'
-                        }`}>
-                        {behavior.category}
-                      </span>
-
-                      <span className="text-gray-500">
-                        {behavior.frequency}
-                      </span>
-
-                      <span className="flex items-center">
-                        🔥 {behavior.streak}
-                      </span>
-
-                      <span className={`font-semibold ${getBehaviorColor(score)}`}>
-                        {willOccur ? '✓' : '⚠'} {score.toFixed(1)}/10
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleBehaviorComplete(behavior.id);
-                    }}
-                    className="bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors"
-                  >
-                    Complete
-                  </button>
-                </div>
-
-                {/* B=M×A×P Components */}
-                <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
-                  <div>
-                    <label className="text-sm text-gray-600">Motivation</label>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        value={behavior.motivation}
-                        onChange={(e) => handleMotivationChange(behavior.id, parseInt(e.target.value))}
-                        className="flex-1"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <span className="text-sm font-semibold w-8">{behavior.motivation}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm text-gray-600">Ability</label>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <input
-                        type="range"
-                        min="0"
-                        max="10"
-                        value={behavior.ability}
-                        onChange={(e) => handleAbilityChange(behavior.id, parseInt(e.target.value))}
-                        className="flex-1"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <span className="text-sm font-semibold w-8">{behavior.ability}</span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-sm text-gray-600">Prompt</label>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-sm">
-                        {behavior.prompt.isEnabled ? '✅' : '❌'} {behavior.prompt.cue}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Improvement Suggestions */}
-                {score < 4 && (
-                  <div className="mt-4 p-3 bg-yellow-50 rounded-lg">
-                    <p className="text-sm font-semibold text-yellow-800 mb-2">Suggestions:</p>
-                    <ul className="text-xs text-yellow-700 space-y-1">
-                      {behavior.motivation < 5 && BehaviorModel.getMotivationEnhancements(behavior.motivation).slice(0, 2).map((suggestion, index) => (
-                        <li key={index}>• {suggestion}</li>
-                      ))}
-                      {behavior.ability < 5 && BehaviorModel.getAbilityImprovements(behavior.ability).slice(0, 2).map((suggestion, index) => (
-                        <li key={index}>• {suggestion}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Selected Behavior Detail */}
-      {selectedBehavior && (
-        <div className="bg-white p-6 rounded-lg shadow-lg">
-          <h3 className="text-xl font-bold mb-4">🔍 Behavior Details: {selectedBehavior.name}</h3>
-
-          {/* Micro-habits */}
-          <div className="mb-6">
-            <h4 className="font-semibold mb-3">Micro-Habits (Tiny Steps)</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {getMicroHabitsForBehavior(selectedBehavior.id).map((microHabit, index) => (
-                <div key={microHabit.id} className="border border-gray-200 rounded-lg p-3">
-                  <div className="flex justify-between items-center">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+                <h3 className="text-xl font-bold mb-5">➕ New Habit</h3>
+                <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                      <p className="font-medium text-sm">{microHabit.name}</p>
-                      <p className="text-xs text-gray-500">{microHabit.duration}s • {microHabit.difficulty}</p>
+                        <label className="text-sm font-medium text-gray-700">Habit Name</label>
+                        <input
+                            required
+                            value={form.name}
+                            onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
+                            className="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--background)]"
+                            placeholder="e.g. Daily Vocabulary Review"
+                        />
                     </div>
-                    <input
-                      type="checkbox"
-                      className="w-5 h-5 text-[var(--background)]"
-                      checked={microHabit.isCompleted}
-                      onChange={(e) => {
-                        // Handle micro-habit completion
-                        const updatedHabits = microHabits.map(h =>
-                          h.id === microHabit.id
-                            ? { ...h, isCompleted: e.target.checked, completedAt: e.target.checked ? new Date() : undefined }
-                            : h
-                        );
-                        setMicroHabits(updatedHabits);
-                      }}
-                    />
-                  </div>
-                </div>
-              ))}
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">Description</label>
+                        <input
+                            value={form.description}
+                            onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                            className="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--background)]"
+                            placeholder="Short description"
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Category</label>
+                            <select
+                                value={form.category}
+                                onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+                                className="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            >
+                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-sm font-medium text-gray-700">Frequency</label>
+                            <select
+                                value={form.frequency}
+                                onChange={e => setForm(p => ({ ...p, frequency: e.target.value }))}
+                                className="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none"
+                            >
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">Motivation: {form.motivation}/10</label>
+                        <input type="range" min="0" max="10" value={form.motivation}
+                            onChange={e => setForm(p => ({ ...p, motivation: +e.target.value }))}
+                            className="w-full mt-1" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">Ability (Ease): {form.ability}/10</label>
+                        <input type="range" min="0" max="10" value={form.ability}
+                            onChange={e => setForm(p => ({ ...p, ability: +e.target.value }))}
+                            className="w-full mt-1" />
+                    </div>
+                    <div>
+                        <label className="text-sm font-medium text-gray-700">Reminder / Prompt</label>
+                        <input
+                            value={form.prompt_cue}
+                            onChange={e => setForm(p => ({ ...p, prompt_cue: e.target.value }))}
+                            className="w-full mt-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--background)]"
+                            placeholder="e.g. After morning coffee"
+                        />
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button type="button" onClick={onClose}
+                            className="flex-1 border border-gray-300 rounded-lg py-2 text-sm font-medium hover:bg-gray-50 transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" disabled={saving}
+                            className="flex-1 bg-[var(--background)] text-white rounded-lg py-2 text-sm font-medium hover:bg-[var(--lightblue)] transition-colors disabled:opacity-60">
+                            {saving ? 'Saving…' : 'Create Habit'}
+                        </button>
+                    </div>
+                </form>
             </div>
-          </div>
-
-          {/* Rewards */}
-          <div>
-            <h4 className="font-semibold mb-3">🎁 Rewards</h4>
-            <div className="space-y-2">
-              {selectedBehavior.rewards.map((reward, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-sm">{reward.description}</p>
-                    <p className="text-xs text-gray-500">
-                      {reward.type} • {reward.isImmediate ? 'Immediate' : 'Delayed'}
-                    </p>
-                  </div>
-                  <span className="bg-[var(--lemon)] text-black px-3 py-1 rounded-full text-sm font-semibold">
-                    +{reward.points} pts
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
-      )}
-    </div>
-  );
+    );
+}
+
+// ── Main Dashboard ────────────────────────────────────────────────────────────
+export default function HabitFormationDashboard({ onBehaviorUpdate }: HabitFormationDashboardProps) {
+    const { user } = useAuth();
+    const [habits, setHabits] = useState<HabitData[]>([]);
+    const [stats, setStats] = useState<HabitStats | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [completing, setCompleting] = useState<string | null>(null);
+
+    const load = useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
+        setError(null);
+        try {
+            const data = await fetchHabits(user.id);
+            setHabits(data.habits);
+            setStats(data.stats);
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [user]);
+
+    useEffect(() => { load(); }, [load]);
+
+    const handleComplete = async (habitId: string) => {
+        if (!user || completing) return;
+        setCompleting(habitId);
+        try {
+            const res = await completeHabit(habitId, user.id);
+            if (res.status === 'already_completed') {
+                alert('Already completed today! 🎉');
+                return;
+            }
+            setHabits(prev => prev.map(h =>
+                h.id === habitId ? { ...h, streak: res.new_streak, completed_today: true } : h
+            ));
+            setStats(prev => prev ? { ...prev, streak_days: prev.streak_days + 1 } : prev);
+        } catch (e: any) {
+            alert(`Error: ${e.message}`);
+        } finally {
+            setCompleting(null);
+        }
+    };
+
+    const handleMotivationChange = async (habitId: string, value: number) => {
+        setHabits(prev => prev.map(h => h.id === habitId ? { ...h, motivation: value } : h));
+        try { await updateHabitFields(habitId, { motivation: value }); }
+        catch { /* silent, UI already updated optimistically */ }
+    };
+
+    const handleAbilityChange = async (habitId: string, value: number) => {
+        setHabits(prev => prev.map(h => h.id === habitId ? { ...h, ability: value } : h));
+        try { await updateHabitFields(habitId, { ability: value }); }
+        catch { /* silent */ }
+    };
+
+    const handleDelete = async (habitId: string) => {
+        if (!confirm('Delete this habit?')) return;
+        try {
+            await deleteHabit(habitId);
+            setHabits(prev => prev.filter(h => h.id !== habitId));
+            if (selectedId === habitId) setSelectedId(null);
+        } catch (e: any) {
+            alert(`Error: ${e.message}`);
+        }
+    };
+
+    const handleAddHabit = async (form: {
+        name: string; description: string; category: string;
+        frequency: string; motivation: number; ability: number; prompt_cue: string;
+    }) => {
+        if (!user) return;
+        const created = await createHabit({
+            user_id: user.id,
+            name: form.name,
+            description: form.description,
+            category: form.category,
+            frequency: form.frequency,
+            motivation: form.motivation,
+            ability: form.ability,
+            prompt_type: 'time',
+            prompt_cue: form.prompt_cue,
+            prompt_enabled: true,
+        });
+        setHabits(prev => [...prev, { ...created, completed_today: false }]);
+    };
+
+    // ── Derived stats for Overview banner ────────────────────────────────────
+    const completedToday = habits.filter(h => h.completed_today).length;
+    const completionRate = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
+    const avgMotivation = habits.length > 0
+        ? Math.round(habits.reduce((s, h) => s + h.motivation, 0) / habits.length * 10)
+        : 0;
+    const analysis = habits.length > 0
+        ? BehaviorModel.calculateHabitFormation(
+            habits.map(h => ({
+                id: h.id, name: h.name, description: h.description || '',
+                motivation: h.motivation, ability: h.ability,
+                prompt: { type: h.prompt_type as any, trigger: h.prompt_trigger || '', cue: h.prompt_cue || '', isEnabled: h.prompt_enabled },
+                category: h.category as any, rewards: [], streak: h.streak, frequency: h.frequency as any
+            }))
+        )
+        : null;
+
+    // ── Loading / Error states ───────────────────────────────────────────────
+    if (!user) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+                <p className="text-2xl mb-2">🔐</p>
+                <p className="text-gray-600">Please sign in to track your habits.</p>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="flex justify-center items-center h-64">
+                <div className="w-12 h-12 border-4 border-[var(--background)] border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center p-8">
+                <p className="text-red-500 mb-4">⚠️ {error}</p>
+                <button onClick={load} className="bg-[var(--background)] text-white px-6 py-2 rounded-lg hover:bg-[var(--lightblue)] transition-colors">
+                    Retry
+                </button>
+            </div>
+        );
+    }
+
+    const selectedHabit = habits.find(h => h.id === selectedId) ?? null;
+
+    return (
+        <div className="max-w-6xl mx-auto space-y-6">
+            {/* ── Header ── */}
+            <div className="text-center">
+                <h2 className="text-3xl font-bold mb-2">🎯 Habit Formation Dashboard</h2>
+                <p className="text-gray-600">Real-time data from your learning activity</p>
+            </div>
+
+            {/* ── Stats Banner ── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-gradient-to-br from-orange-400 to-orange-600 text-white rounded-xl p-4 text-center shadow-lg">
+                    <p className="text-4xl font-bold">🔥 {stats?.streak_days ?? 0}</p>
+                    <p className="text-sm opacity-90 mt-1">Day Streak</p>
+                </div>
+                <div className="bg-gradient-to-br from-green-400 to-green-600 text-white rounded-xl p-4 text-center shadow-lg">
+                    <p className="text-4xl font-bold">{completionRate}%</p>
+                    <p className="text-sm opacity-90 mt-1">Today's Completion</p>
+                </div>
+                <div className="bg-gradient-to-br from-blue-400 to-blue-600 text-white rounded-xl p-4 text-center shadow-lg">
+                    <p className="text-4xl font-bold">{stats?.srs_reviewed_today ?? 0}</p>
+                    <p className="text-sm opacity-90 mt-1">Words Reviewed Today</p>
+                </div>
+                <div className="bg-gradient-to-br from-purple-400 to-purple-600 text-white rounded-xl p-4 text-center shadow-lg">
+                    <p className="text-4xl font-bold">{stats?.avg_success_rate ?? 0}%</p>
+                    <p className="text-sm opacity-90 mt-1">SRS Accuracy</p>
+                </div>
+            </div>
+
+            {/* ── Overall Progress (from BehaviorModel) ── */}
+            {analysis && (
+                <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-white p-6 rounded-xl shadow-lg">
+                    <h3 className="text-lg font-bold mb-4">📊 Overall Habit Formation</h3>
+                    <div className="grid grid-cols-3 gap-6 text-center">
+                        <div>
+                            <p className="text-3xl font-bold">{analysis.formationScore}%</p>
+                            <p className="text-sm opacity-80 mt-1">Formation Score</p>
+                            <div className="mt-2 h-2 bg-white/20 rounded-full">
+                                <div className="h-2 bg-white rounded-full transition-all" style={{ width: `${analysis.formationScore}%` }} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-bold">{analysis.consistencyScore}%</p>
+                            <p className="text-sm opacity-80 mt-1">Consistency</p>
+                            <div className="mt-2 h-2 bg-white/20 rounded-full">
+                                <div className="h-2 bg-white rounded-full transition-all" style={{ width: `${analysis.consistencyScore}%` }} />
+                            </div>
+                        </div>
+                        <div>
+                            <p className="text-3xl font-bold">{stats?.longest_streak ?? 0}</p>
+                            <p className="text-sm opacity-80 mt-1">Longest Streak</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── AI Recommendations ── */}
+            {analysis && analysis.recommendations.length > 0 && (
+                <div className="bg-[var(--lemon)] p-5 rounded-xl">
+                    <h3 className="font-bold text-black mb-3">💡 Recommendations</h3>
+                    <ul className="space-y-1">
+                        {analysis.recommendations.map((rec, i) => (
+                            <li key={i} className="flex items-start text-sm text-black">
+                                <span className="mr-2 mt-0.5">•</span>{rec}
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {/* ── Active Behaviors ── */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+                <div className="flex justify-between items-center mb-5">
+                    <h3 className="text-xl font-bold">🎯 Active Habits ({habits.length})</h3>
+                    <button
+                        onClick={() => setShowAddModal(true)}
+                        className="bg-[var(--background)] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[var(--lightblue)] transition-colors flex items-center gap-1"
+                    >
+                        <span>+</span> Add Habit
+                    </button>
+                </div>
+
+                {habits.length === 0 ? (
+                    <div className="text-center py-12 text-gray-400">
+                        <p className="text-5xl mb-3">🌱</p>
+                        <p className="font-medium">No habits yet</p>
+                        <p className="text-sm mt-1">Click "+ Add Habit" to start building your routine</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {habits.map(habit => {
+                            const score = getBehaviorScore(habit.motivation, habit.ability, habit.prompt_enabled);
+                            const willOccur = BehaviorModel.willBehaviorOccur(habit.motivation, habit.ability, habit.prompt_enabled ? 10 : 0);
+                            const isSelected = selectedId === habit.id;
+
+                            return (
+                                <div
+                                    key={habit.id}
+                                    className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${isSelected ? 'border-[var(--background)] bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                                    onClick={() => setSelectedId(isSelected ? null : habit.id)}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h4 className="font-semibold text-gray-900">{habit.name}</h4>
+                                                {habit.completed_today && (
+                                                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                                                        ✓ Done Today
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {habit.description && (
+                                                <p className="text-sm text-gray-500 mt-0.5 truncate">{habit.description}</p>
+                                            )}
+                                            <div className="flex items-center gap-3 mt-2 text-xs flex-wrap">
+                                                <span className={`px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[habit.category] || 'bg-gray-100 text-gray-700'}`}>
+                                                    {habit.category}
+                                                </span>
+                                                <span className="text-gray-500">{habit.frequency}</span>
+                                                <span>🔥 {habit.streak} day{habit.streak !== 1 ? 's' : ''}</span>
+                                                <span className={`font-semibold ${getBehaviorColor(score)}`}>
+                                                    {willOccur ? '✅' : '⚠️'} {score.toFixed(1)}/10
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                                            <button
+                                                onClick={e => { e.stopPropagation(); handleComplete(habit.id); }}
+                                                disabled={habit.completed_today || completing === habit.id}
+                                                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${habit.completed_today
+                                                    ? 'bg-gray-100 text-gray-400 cursor-default'
+                                                    : 'bg-green-500 text-white hover:bg-green-600 active:scale-95'
+                                                    } ${completing === habit.id ? 'opacity-60' : ''}`}
+                                            >
+                                                {completing === habit.id ? '…' : habit.completed_today ? 'Done ✓' : 'Complete'}
+                                            </button>
+                                            <button
+                                                onClick={e => { e.stopPropagation(); handleDelete(habit.id); }}
+                                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50"
+                                                title="Delete habit"
+                                            >
+                                                🗑️
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* B = M × A × P sliders */}
+                                    {isSelected && (
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-600">Motivation (M)</label>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <input
+                                                        type="range" min="0" max="10"
+                                                        value={habit.motivation}
+                                                        onChange={e => handleMotivationChange(habit.id, +e.target.value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                        className="flex-1 accent-[var(--background)]"
+                                                    />
+                                                    <span className="text-sm font-bold w-6 text-center">{habit.motivation}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-600">Ability (A)</label>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <input
+                                                        type="range" min="0" max="10"
+                                                        value={habit.ability}
+                                                        onChange={e => handleAbilityChange(habit.id, +e.target.value)}
+                                                        onClick={e => e.stopPropagation()}
+                                                        className="flex-1 accent-[var(--background)]"
+                                                    />
+                                                    <span className="text-sm font-bold w-6 text-center">{habit.ability}</span>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-xs font-medium text-gray-600">Prompt (P)</label>
+                                                <div className="flex items-center gap-2 mt-1 text-sm">
+                                                    <span>{habit.prompt_enabled ? '✅' : '❌'}</span>
+                                                    <span className="text-gray-600 truncate">{habit.prompt_cue || 'No prompt set'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {score < 4 && (
+                                        <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                            <p className="text-xs font-semibold text-yellow-800 mb-1">💡 This habit needs work:</p>
+                                            <p className="text-xs text-yellow-700">
+                                                {habit.motivation < 5 ? 'Boost motivation by connecting this habit to your core goal. ' : ''}
+                                                {habit.ability < 5 ? 'Make it easier — shrink the habit to 2 minutes or less.' : ''}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* ── Secondary stats (Saved items / SRS) ── */}
+            {stats && (
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white rounded-xl shadow p-5 text-center">
+                        <p className="text-3xl font-bold text-[var(--background)]">{stats.saved_items_total}</p>
+                        <p className="text-sm text-gray-600 mt-1">Total Saved Items</p>
+                    </div>
+                    <div className="bg-white rounded-xl shadow p-5 text-center">
+                        <p className="text-3xl font-bold text-[var(--background)]">{stats.longest_streak}</p>
+                        <p className="text-sm text-gray-600 mt-1">Longest Streak (days)</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Add Habit Modal ── */}
+            {showAddModal && (
+                <AddHabitModal onClose={() => setShowAddModal(false)} onSave={handleAddHabit} />
+            )}
+        </div>
+    );
 }

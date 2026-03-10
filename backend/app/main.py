@@ -26,11 +26,13 @@ os.makedirs(f"{STATIC_DIR}/audio_clips", exist_ok=True)
 app.mount("/audio_clips", StaticFiles(directory=f"{STATIC_DIR}/audio_clips"), name="audio_clips")
 
 from app.api.srs import router as srs_router
+from app.api.habits import router as habits_router
 
 app.include_router(youtube_router, prefix="/api", tags=["YouTube"])
 app.include_router(vocabulary_router, prefix="/api", tags=["Vocabulary"])
 app.include_router(srs_router, prefix="/api", tags=["SRS"])
 app.include_router(saved_items_router, prefix="/api", tags=["Saved Items"])
+app.include_router(habits_router, prefix="/api", tags=["Habits"])
 @app.get("/")
 def read_root():
     return {"message": "Korean Learning API is running"}

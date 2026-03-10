@@ -2,17 +2,44 @@
 
 import ModernNavigation from "@/app/components/ModernNavigation";
 import CurriculumRoadmap from "@/app/components/CurriculumRoadmap";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/app/hooks/useAuth";
 
 export default function CurriculumPage() {
   const [showSetup, setShowSetup] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const { user, updateUserMetadata } = useAuth();
+  
   const [roadmapConfig, setRoadmapConfig] = useState({
     currentLevel: 1,
     targetLevel: 5,
     timeframe: 12 // weeks
   });
 
-  const handleStartRoadmap = () => {
+  useEffect(() => {
+    if (user?.user_metadata?.curriculum) {
+      setRoadmapConfig(user.user_metadata.curriculum);
+      setShowSetup(false);
+    } else if (user?.user_metadata?.level) {
+      // Pre-fill current level if user took the assessment
+      setRoadmapConfig(prev => ({
+        ...prev,
+        currentLevel: user.user_metadata.level
+      }));
+    }
+  }, [user]);
+
+  const handleStartRoadmap = async () => {
+    if (user) {
+      setIsSaving(true);
+      try {
+        await updateUserMetadata({ curriculum: roadmapConfig });
+      } catch (err) {
+        console.error("Failed to save curriculum:", err);
+      } finally {
+        setIsSaving(false);
+      }
+    }
     setShowSetup(false);
   };
 
@@ -98,9 +125,17 @@ export default function CurriculumPage() {
 
               <button
                 onClick={handleStartRoadmap}
-                className="w-full btn-primary py-4 text-lg"
+                disabled={isSaving}
+                className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Generate My Roadmap
+                {isSaving ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : (
+                  "Generate My Roadmap"
+                )}
               </button>
             </div>
           </div>
@@ -118,9 +153,15 @@ export default function CurriculumPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Your Personalized Curriculum
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-gray-600 mb-6">
             Follow this roadmap to reach your Korean learning goals
           </p>
+          <button 
+            onClick={() => setShowSetup(true)}
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 inline-flex items-center gap-2"
+          >
+            <span>⚙️</span> Edit Roadmap Parameters
+          </button>
         </div>
 
         <CurriculumRoadmap
