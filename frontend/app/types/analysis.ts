@@ -40,6 +40,8 @@ export interface GrammarPoint {
 export interface VocabularyItem {
   word: string;
   meaning: string;
+  pronunciation?: string;  // romanization / IPA hint
+  romanization?: string;   // alternate field name from AI
   conjugation_tip?: string;
   usage_note?: string;
 }

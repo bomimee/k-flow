@@ -127,6 +127,8 @@ import type {
   QuizModeConfig
 } from '@/app/types/vocabulary';
 import { fetchMixedQuizWords } from '@/app/services/vocabulary';
+import { saveQuizSession } from '@/app/services/quiz';
+import type { QuizAchievement } from '@/app/services/quiz';
 import { useAuth } from '@/app/hooks/useAuth';
 
 interface VocabularyQuizProps {
@@ -147,11 +149,14 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [savedWordCount, setSavedWordCount] = useState(0);
+  const [showPronunciationHint, setShowPronunciationHint] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<QuizAchievement[]>([]);
 
   useEffect(() => {
     async function loadQuiz() {
       try {
         setIsLoading(true);
+        setShowPronunciationHint(false);
         const result = await fetchMixedQuizWords({
           userId: user?.id,
           level: config.levelRange ? config.levelRange[0] : 1,
@@ -354,27 +359,55 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
     setCurrentQuestion(nextQuestion);
     setSelectedAnswer('');
     setShowResult(false);
+    setShowPronunciationHint(false); // reset hint for each new question
     setTimeLeft(config.timeLimit || 30);
     setIsTimerActive(true);
     setQuestionStartTime(Date.now());
   };
 
-  const completeQuiz = (finalSession: QuizSession) => {
+  const completeQuiz = async (finalSession: QuizSession) => {
+    const totalQ = finalSession.questions.length;
+    const correct = finalSession.score;
+    const accuracy = Math.round((correct / Math.max(totalQ, 1)) * 100);
+    const timeSpent = Math.floor((Date.now() - finalSession.startTime.getTime()) / 1000);
+
     const result: QuizResult = {
       sessionId: finalSession.id,
-      totalQuestions: finalSession.questions.length,
-      correctAnswers: finalSession.score,
-      score: Math.round((finalSession.score / finalSession.questions.length) * 100),
+      totalQuestions: totalQ,
+      correctAnswers: correct,
+      score: accuracy,
       totalPoints: finalSession.totalPoints,
-      timeSpent: Math.floor((Date.now() - finalSession.startTime.getTime()) / 1000),
+      timeSpent,
       averageTimePerQuestion: Math.round(
         finalSession.answers.reduce((sum, ans) => sum + ans.timeSpent, 0) / finalSession.answers.length
       ),
       streak: finalSession.bestStreak,
       bestStreak: finalSession.bestStreak,
-      levelUp: false, // Calculate based on XP
-      achievements: [] // Calculate based on performance
+      levelUp: false,
+      achievements: []
     };
+
+    // Save to DB if user is logged in
+    if (user?.id) {
+      try {
+        const saved = await saveQuizSession({
+          user_id:         user.id,
+          mode:            mode,
+          score:           correct,
+          total_points:    finalSession.totalPoints,
+          correct_answers: correct,
+          total_questions: totalQ,
+          accuracy,
+          time_spent:      timeSpent,
+          best_streak:     finalSession.bestStreak,
+        });
+        if (saved.new_achievements?.length > 0) {
+          setNewAchievements(saved.new_achievements);
+        }
+      } catch (e) {
+        console.warn('Quiz session save failed:', e);
+      }
+    }
 
     onQuizComplete(result);
   };
@@ -441,7 +474,31 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
   }
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg relative">
+
+      {/* 🏆 Achievement unlock toast */}
+      {newAchievements.length > 0 && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 w-80 space-y-2">
+          {newAchievements.map((ach) => (
+            <div
+              key={ach.id}
+              className="flex items-center gap-3 bg-gradient-to-r from-yellow-400 to-orange-400 text-white px-4 py-3 rounded-xl shadow-lg animate-bounce"
+            >
+              <span className="text-2xl">{ach.icon}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm leading-tight">🏆 Achievement Unlocked!</p>
+                <p className="text-xs opacity-90 truncate">{ach.name}</p>
+              </div>
+              <span className="text-xs font-bold bg-white/30 px-2 py-1 rounded-full">+{ach.points}pts</span>
+              <button
+                onClick={() => setNewAchievements(prev => prev.filter(a => a.id !== ach.id))}
+                className="text-white/70 hover:text-white ml-1 text-lg leading-none"
+              >×</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Quiz Header */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
@@ -534,12 +591,28 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
 
         {currentQuestion.type === 'sentence-fill' && (
           <div className="space-y-4">
+            {/* Hint area: meaning + optional pronunciation */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center justify-between">
                 <span className="text-gray-500">
                   [{currentQuestion.vocabulary.meaning}]
                 </span>
+                {/* Pronunciation hint button — show only if pronunciation exists */}
+                {currentQuestion.vocabulary.pronunciation && (
+                  <button
+                    onClick={() => setShowPronunciationHint(h => !h)}
+                    disabled={showResult}
+                    className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 hover:bg-blue-200 transition"
+                  >
+                    {showPronunciationHint ? 'Hide hint' : '💡 발음 힌트'}
+                  </button>
+                )}
               </div>
+              {showPronunciationHint && currentQuestion.vocabulary.pronunciation && (
+                <div className="mt-2 text-blue-600 text-sm font-medium">
+                  🔊 [{currentQuestion.vocabulary.pronunciation}]
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               <input

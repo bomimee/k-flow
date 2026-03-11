@@ -193,7 +193,7 @@ export default function ModernNavigation() {
         <div className="px-4">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <div className="flex items-center space-x-3">
+            <Link href="/" className="flex items-center space-x-3">
               <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <span className="text-white text-lg font-bold">K</span>
               </div>
@@ -201,7 +201,7 @@ export default function ModernNavigation() {
                 <h1 className="text-lg font-bold text-gray-900">K-Flow</h1>
                 <p className="text-xs text-gray-500">Korean Learning</p>
               </div>
-            </div>
+            </Link>
 
             {/* Mobile Menu Button */}
             <button

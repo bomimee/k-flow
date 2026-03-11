@@ -437,7 +437,14 @@ export default function ResultResponse({ result }: ResultResponseProps) {
                             itemType="vocabulary"
                             uniqueKey={`vocabulary:${item.word}`}
                             isInitiallySaved={savedKeys.has(`vocabulary:${item.word}`)}
-                            content={{ ...item, category: category, source: source, video_id: video_id }}
+                            content={{
+                              ...item,
+                              category: category,
+                              source: source,
+                              video_id: video_id,
+                              // Ensure pronunciation is saved even if field name varies
+                              pronunciation: item.pronunciation || item.romanization || '',
+                            }}
                           />
                         </div>
                         {item.conjugation_tip && (
