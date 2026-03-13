@@ -54,6 +54,51 @@ def analyze_transcript_with_llm(transcript: str, level: str) -> dict:
             "raw_output": cleaned
         }
 
+def generate_grammar_quiz(title: str, meaning: str, description: str) -> dict:
+    prompt = f"""
+    You are an expert Korean language teacher. 
+    A student is practicing the grammar point: {title}
+    Meaning: {meaning}
+    Rule: {description}
+    
+    Please generate ONE new practice question for this grammar point.
+    Return exactly ONLY a JSON object with this structure:
+    {{
+      "question": "A short, complete Korean sentence with an English translation, but replace the grammar point with a blank '___'.",
+      "options": ["conjugated word option 1", "conjugated word option 2", "conjugated word option 3", "conjugated word option 4"],
+      "answer": 0  // index of the correct option
+    }}
+    
+    Make the distractor options plausible grammatical mistakes or inappropriate conjugations for the context.
+    Do not use markdown blocks, just the JSON string directly.
+    """
+
+    response = client.models.generate_content(
+        model='gemini-2.5-flash',
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction="You are a helpful language tutor.",
+            temperature=0.7,
+        ),
+    )
+
+    content = response.text
+    cleaned = extract_json(content)
+    
+    if not cleaned:
+        return {
+            "error": "LLM returned empty or invalid response",
+            "raw_output": content
+        }
+        
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        return {
+            "error": "Failed to parse json",
+            "raw_output": cleaned
+        }
+
 model = whisper.load_model("base")
 
 def speech_to_text(audio_path: str) -> str:

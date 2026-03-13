@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/app/hooks/useAuth';
 import { updateGrammarSRSProgress } from '@/app/services/srs';
+import { useAudioPlayer } from '@/app/hooks/useAudioPlayer';
 
 interface GrammarLessonModalProps {
   isOpen: boolean;
@@ -28,12 +29,46 @@ const DEFAULT_GRAMMAR = {
 
 export default function GrammarLessonModal({ isOpen, onClose, grammarTitle }: GrammarLessonModalProps) {
   const { user } = useAuth();
+  const { playTTS, stop, isPlaying } = useAudioPlayer();
   const [mode, setMode] = useState<'lesson' | 'practice'>('lesson');
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false);
+
+  const handleGenerateMore = async () => {
+    if (!data) return;
+    setIsGeneratingQuiz(true);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/grammar/generate-quiz`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: data.title,
+          meaning: data.meaning,
+          description: data.description
+        })
+      });
+      if (!response.ok) throw new Error('Failed to generate new practice question');
+      
+      const newQuiz = await response.json();
+      if (newQuiz && newQuiz.question) {
+        setData((prev: any) => ({ ...prev, quiz: newQuiz }));
+        setSelectedOption(null);
+        setShowResult(false);
+      }
+    } catch (err) {
+      console.error('Generation Error:', err);
+      alert('Failed to generate a new question. Please try again later.');
+    } finally {
+      setIsGeneratingQuiz(false);
+    }
+  };
 
   useEffect(() => {
     const fetchGrammar = async () => {
@@ -64,6 +99,24 @@ export default function GrammarLessonModal({ isOpen, onClose, grammarTitle }: Gr
     fetchGrammar();
   }, [isOpen, grammarTitle]);
 
+  // Handle Play TTS
+  const handlePlayTTS = (text: string, idx: number) => {
+    if (isPlaying && playingIdx === idx) {
+      stop();
+      setPlayingIdx(null);
+    } else {
+      playTTS(text);
+      setPlayingIdx(idx);
+    }
+  };
+
+  // Reset playingIdx when isPlaying changes externally
+  useEffect(() => {
+    if (!isPlaying) {
+      setPlayingIdx(null);
+    }
+  }, [isPlaying]);
+
   if (!isOpen || !grammarTitle) return null;
 
   if (!data) {
@@ -93,6 +146,8 @@ export default function GrammarLessonModal({ isOpen, onClose, grammarTitle }: Gr
     setMode('lesson');
     setSelectedOption(null);
     setShowResult(false);
+    stop();
+    setPlayingIdx(null);
   };
 
   const handleClose = () => {
@@ -194,8 +249,11 @@ export default function GrammarLessonModal({ isOpen, onClose, grammarTitle }: Gr
                         <p className="text-gray-600 text-sm mb-1">{ex.english}</p>
                         {ex.notes && <p className="text-xs text-green-700 font-medium bg-green-50 inline-block px-2 py-0.5 rounded">Note: {ex.notes}</p>}
                       </div>
-                      <button className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-blue-100 hover:text-blue-600 transition-colors">
-                        🔊
+                      <button 
+                        onClick={() => handlePlayTTS(ex.korean, idx)}
+                        className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-full transition-colors ${isPlaying && playingIdx === idx ? 'bg-blue-600 text-white' : 'bg-gray-100 hover:bg-blue-100 hover:text-blue-600'}`}
+                      >
+                        {isPlaying && playingIdx === idx ? '⏸' : '🔊'}
                       </button>
                     </div>
                   ))}
@@ -265,12 +323,27 @@ export default function GrammarLessonModal({ isOpen, onClose, grammarTitle }: Gr
                   <div className={`p-4 rounded-xl text-center font-bold ${selectedOption === data.quiz.answer ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                     {selectedOption === data.quiz.answer ? 'Great job! That is correct. 🎉' : 'Oops, let\'s review the lesson again!'}
                   </div>
-                  <button 
-                    onClick={handleClose}
-                    className="w-full py-4 bg-gray-900 hover:bg-black text-white rounded-xl font-bold transition-colors"
-                  >
-                    Finish & Close
-                  </button>
+                  
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={handleGenerateMore}
+                      disabled={isGeneratingQuiz}
+                      className="flex-1 py-4 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-xl font-bold transition-colors disabled:opacity-50 flex items-center justify-center"
+                    >
+                      {isGeneratingQuiz ? (
+                        <>
+                           <span className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></span>
+                           Generating...
+                        </>
+                      ) : '✨ Practice More'}
+                    </button>
+                    <button 
+                      onClick={handleClose}
+                      className="flex-1 py-4 bg-gray-900 hover:bg-black text-white rounded-xl font-bold transition-colors"
+                    >
+                      Finish
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
