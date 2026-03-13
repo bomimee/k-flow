@@ -9,7 +9,7 @@ export default function CurriculumPage() {
   const [showSetup, setShowSetup] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const { user, updateUserMetadata } = useAuth();
-  
+
   const [roadmapConfig, setRoadmapConfig] = useState({
     currentLevel: 1,
     targetLevel: 5,
@@ -156,12 +156,6 @@ export default function CurriculumPage() {
           <p className="text-xl text-gray-600 mb-6">
             Follow this roadmap to reach your Korean learning goals
           </p>
-          <button 
-            onClick={() => setShowSetup(true)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm font-medium text-gray-700 inline-flex items-center gap-2"
-          >
-            <span>⚙️</span> Edit Roadmap Parameters
-          </button>
         </div>
 
         <CurriculumRoadmap

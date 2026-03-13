@@ -1,13 +1,21 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { fetchUserProfile, UserProfile } from '../services/users';
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile(user.id).then(setProfile);
+    }
+  }, [user]);
 
   if (!user) {
     return (
@@ -26,8 +34,9 @@ export default function ProfilePage() {
     );
   }
 
-  // We can mock a level or take it from metadata if it ever exists
-  const userLevel = user.user_metadata?.level || 1;
+  const userLevel = profile?.ttmik_level || user.user_metadata?.level || 1;
+  const xp = profile?.experience || 0;
+  const levelTitle = userLevel <= 3 ? 'Beginner' : userLevel <= 6 ? 'Intermediate' : 'Advanced';
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -108,7 +117,11 @@ export default function ProfilePage() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-50 pb-4">
               <div className="text-sm font-medium text-gray-500">Current Level</div>
-              <div className="sm:col-span-2 text-gray-900 font-medium">Level {userLevel} <span className="text-gray-400 text-sm ml-2">(Beginner)</span></div>
+              <div className="sm:col-span-2 text-gray-900 font-medium">Level {userLevel} <span className="text-gray-400 text-sm ml-2">({levelTitle})</span></div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border-b border-gray-50 pb-4">
+              <div className="text-sm font-medium text-gray-500">Experience</div>
+              <div className="sm:col-span-2 text-gray-900 font-medium">{xp} XP</div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="text-sm font-medium text-gray-500">Account status</div>

@@ -34,6 +34,34 @@ export async function fetchDueItems(userId: string): Promise<VocabularyItem[]> {
     }
 }
 
+export async function fetchDueGrammarItems(userId: string): Promise<any[]> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/srs/grammar/due/${userId}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+            throw new Error(`Failed to fetch due grammar items: ${errorData.detail || response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Map backend structure to Frontend grammar item format
+        return data.map((item: any) => ({
+            ...item.grammar_points,
+            srsData: {
+                interval: item.interval,
+                repetitions: item.repetitions,
+                easeFactor: item.ease_factor,
+                nextReview: new Date(item.next_review),
+                lastReview: item.last_review ? new Date(item.last_review) : undefined,
+                successRate: item.success_rate
+            }
+        }));
+    } catch (error) {
+        console.error('Error in fetchDueGrammarItems:', error);
+        return [];
+    }
+}
+
 export async function updateSRSProgress(
     userId: string,
     vocabularyId: string,
@@ -60,5 +88,49 @@ export async function updateSRSProgress(
         }
     } catch (error: any) {
         console.error('❌ SRS Update error:', error.message);
+    }
+}
+
+export async function updateGrammarSRSProgress(
+    userId: string,
+    grammarId: string,
+    isCorrect: boolean
+): Promise<void> {
+    try {
+        // SM-2 Algorithm approximation for initial learning
+        const quality = isCorrect ? 4 : 0;
+        const easeFactor = Math.max(1.3, 2.5 + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02)));
+        
+        let interval = 1; // First review in 1 day
+        const repetitions = isCorrect ? 1 : 0;
+        
+        if (repetitions > 0) {
+            interval = isCorrect ? 1 : 0; // simplified for grammar first run
+        }
+
+        const nextReview = new Date();
+        nextReview.setDate(nextReview.getDate() + interval);
+        const successRate = isCorrect ? 100 : 0;
+
+        const response = await fetch(`${API_BASE_URL}/api/srs/grammar/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                grammar_id: grammarId,
+                interval: interval,
+                repetitions: repetitions,
+                ease_factor: easeFactor,
+                next_review: nextReview.toISOString(),
+                success_rate: successRate
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+            throw new Error(`Failed to update Grammar SRS: ${errorData.detail || response.statusText}`);
+        }
+    } catch (error: any) {
+        console.error('❌ Grammar SRS Update error:', error.message);
     }
 }

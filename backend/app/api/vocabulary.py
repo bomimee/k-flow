@@ -48,7 +48,8 @@ def _db_levels_for_ttmik(level: int) -> List[int]:
 async def get_vocabulary(
     level: Optional[int] = Query(None, ge=1, le=10),
     categories: Optional[List[str]] = Query(None),
-    limit: int = Query(10, ge=1, le=100)
+    limit: int = Query(10, ge=1, le=100),
+    week: Optional[int] = Query(None, ge=1)
 ):
     try:
         query = supabase.table("vocabulary").select("*")
@@ -59,9 +60,26 @@ async def get_vocabulary(
         result = query.execute()
         if not result.data:
             return []
+        
         mapped = [_map_vocab_row(item) for item in result.data]
-        random.shuffle(mapped)
-        return mapped[:limit]
+
+        if week:
+            # Deterministic sorting for curriculum
+            mapped.sort(key=lambda x: x["korean"])
+            
+            total_words = len(mapped)
+            start_idx = ((week - 1) * limit) % total_words
+            end_idx = start_idx + limit
+
+            # If end_idx goes beyond total_words, we wrap around
+            sliced = mapped[start_idx:end_idx]
+            if len(sliced) < limit:
+                remaining_needed = limit - len(sliced)
+                sliced.extend(mapped[:remaining_needed])
+            return sliced
+        else:
+            random.shuffle(mapped)
+            return mapped[:limit]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

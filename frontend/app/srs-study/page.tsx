@@ -2,58 +2,43 @@
 
 import ModernNavigation from "@/app/components/ModernNavigation";
 import SRSStudySession from "@/app/components/SRSStudySession";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { VocabularyItem, SRSStudyResults } from "@/app/types/vocabulary";
+import { useAuth } from "@/app/hooks/useAuth";
+import { fetchDueItems, fetchDueGrammarItems } from "@/app/services/srs";
+import { fetchHabits } from "@/app/services/habits";
+import SRSGrammarStudySession from "@/app/components/SRSGrammarStudySession";
 
 export default function SRSStudyPage() {
-  // 데모 어휘 데이터 - 실제로는 API에서 가져옴
-  const demoVocabulary: VocabularyItem[] = [
-    {
-      id: 'ca30de01-5b32-41b3-ac70-9f1fb81385bd', // Real ID from DB (가족)
-      korean: '사랑',
-      hanja: '愛',
-      meaning: 'love',
-      pronunciation: 'sarang',
-      level: 1,
-      exampleSentence: '나는 너를 사랑해요.',
-      exampleTranslation: 'I love you.',
-      wordRoot: '사랑하다',
-      relatedWords: ['애정', '연애', '우정'],
-      difficulty: 'easy',
-      category: 'emotions',
-      srsData: {
-        interval: 1,
-        repetitions: 0,
-        easeFactor: 2.5,
-        nextReview: new Date(),
-        successRate: 0
-      }
-    },
-    {
-      id: 'ccf9fc82-5003-4cbb-9620-fc200395add0', // Real ID from DB (공항)
-      korean: '공부',
-      hanja: '工夫',
-      meaning: 'study',
-      pronunciation: 'gongbu',
-      level: 1,
-      exampleSentence: '저는 한국어를 공부해요.',
-      exampleTranslation: 'I study Korean.',
-      wordRoot: '공부하다',
-      relatedWords: ['학습', '연구', '교육'],
-      difficulty: 'easy',
-      category: 'education',
-      srsData: {
-        interval: 1,
-        repetitions: 0,
-        easeFactor: 2.5,
-        nextReview: new Date(),
-        successRate: 0
-      }
-    }
-  ];
-
   const [showWelcome, setShowWelcome] = useState(true);
+  const [studyMode, setStudyMode] = useState<'vocabulary' | 'grammar'>('vocabulary');
   const [studyResults, setStudyResults] = useState<SRSStudyResults | null>(null);
+  const { user } = useAuth();
+  const [srsStats, setSrsStats] = useState<{ dueToday: number; accuracy: number; streak: number; totalLearned: number } | null>(null);
+  const [srsGrammarStats, setSrsGrammarStats] = useState<{ dueToday: number } | null>(null);
+  const [dueVocabulary, setDueVocabulary] = useState<VocabularyItem[]>([]);
+  const [dueGrammar, setDueGrammar] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([
+      fetchDueItems(user.id),
+      fetchDueGrammarItems(user.id),
+      fetchHabits(user.id).catch(() => null)
+    ]).then(([dueItems, dueGrammarItems, habitsRes]) => {
+      setDueVocabulary(dueItems);
+      setDueGrammar(dueGrammarItems);
+      setSrsStats({
+        dueToday: dueItems.length,
+        accuracy: habitsRes ? Math.round(habitsRes.stats.avg_success_rate) : 0,
+        streak: habitsRes ? habitsRes.stats.streak_days : 0,
+        totalLearned: habitsRes ? habitsRes.stats.saved_items_total : 0
+      });
+      setSrsGrammarStats({
+        dueToday: dueGrammarItems.length,
+      });
+    }).catch(console.error);
+  }, [user]);
 
   const handleStartStudy = () => {
     setShowWelcome(false);
@@ -114,19 +99,27 @@ export default function SRSStudyPage() {
               {/* Study Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-primary mb-1">12</div>
+                  <div className="text-2xl font-bold text-primary mb-1">
+                    {srsStats ? srsStats.dueToday : 12}
+                  </div>
                   <div className="text-sm text-gray-600">Due Today</div>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-green-600 mb-1">85%</div>
+                  <div className="text-2xl font-bold text-green-600 mb-1">
+                    {srsStats ? srsStats.accuracy : 85}%
+                  </div>
                   <div className="text-sm text-gray-600">Accuracy</div>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-orange-500 mb-1">7</div>
+                  <div className="text-2xl font-bold text-orange-500 mb-1">
+                    {srsStats ? srsStats.streak : 7}
+                  </div>
                   <div className="text-sm text-gray-600">Day Streak</div>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <div className="text-2xl font-bold text-purple-600 mb-1">156</div>
+                  <div className="text-2xl font-bold text-purple-600 mb-1">
+                    {srsStats ? srsStats.totalLearned : 156}
+                  </div>
                   <div className="text-sm text-gray-600">Total Learned</div>
                 </div>
               </div>
@@ -166,12 +159,22 @@ export default function SRSStudyPage() {
                 </div>
               </div>
 
-              <button
-                onClick={handleStartStudy}
-                className="w-full btn-primary py-4 text-lg"
-              >
-                Start SRS Session
-              </button>
+              <div className="flex justify-center space-x-4">
+                <button
+                  onClick={() => { setStudyMode('vocabulary'); handleStartStudy(); }}
+                  disabled={dueVocabulary.length === 0}
+                  className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueVocabulary.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                >
+                  Start Vocab Session ({dueVocabulary.length} due)
+                </button>
+                <button
+                  onClick={() => { setStudyMode('grammar'); handleStartStudy(); }}
+                  disabled={dueGrammar.length === 0}
+                  className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueGrammar.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                >
+                  Start Grammar Session ({dueGrammar.length} due)
+                </button>
+              </div>
             </div>
           </div>
         </main>
@@ -233,10 +236,10 @@ export default function SRSStudyPage() {
                 Continue Studying
               </button>
               <a
-                href="/vocabulary-quiz"
+                href="/curriculum"
                 className="btn-primary px-6 py-3"
               >
-                Try Vocabulary Quiz
+                Return to Curriculum
               </a>
             </div>
           </div>
@@ -250,10 +253,37 @@ export default function SRSStudyPage() {
       <ModernNavigation />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <SRSStudySession
-          vocabulary={demoVocabulary}
-          onSessionComplete={handleSessionComplete}
-        />
+        {studyMode === 'vocabulary' ? (
+          dueVocabulary.length > 0 ? (
+            <SRSStudySession
+              vocabulary={dueVocabulary}
+              onSessionComplete={handleSessionComplete}
+            />
+          ) : (
+            <div className="text-center py-20 bg-white rounded-lg shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">You're all caught up on Vocabulary!</h2>
+              <p className="text-gray-600 mb-8">No more vocabulary to review today. Come back tomorrow.</p>
+              <a href="/curriculum" className="flex-1 btn-primary px-6 py-3 rounded-lg text-white">
+                View study plan
+              </a>
+            </div>
+          )
+        ) : (
+          dueGrammar.length > 0 ? (
+            <SRSGrammarStudySession
+              grammarItems={dueGrammar}
+              onSessionComplete={handleSessionComplete}
+            />
+          ) : (
+            <div className="text-center py-20 bg-white rounded-lg shadow-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">You're all caught up on Grammar!</h2>
+              <p className="text-gray-600 mb-8">No more grammar points to review today. Come back tomorrow.</p>
+              <a href="/curriculum" className="flex-1 btn-primary px-6 py-3 rounded-lg text-white">
+                View study plan
+              </a>
+            </div>
+          )
+        )}
       </main>
     </div>
   );

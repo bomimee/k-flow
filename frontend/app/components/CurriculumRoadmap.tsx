@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import type { TTMIKLevel, CurriculumRoadmap, WeeklyGoal, Milestone } from '@/app/types/level';
 import { TTMIK_LEVELS, LEVEL_REQUIREMENTS } from '@/app/types/level';
 
@@ -44,7 +45,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
       for (let week = levelStartWeek; week <= levelEndWeek && week <= timeframe; week++) {
         const weekInLevel = week - levelStartWeek + 1;
         const totalWeeksInLevel = levelEndWeek - levelStartWeek + 1;
-        
+
         weeklyGoals.push({
           week,
           vocabulary: Math.ceil((levelInfo.estimatedVocabulary * 0.3) / totalWeeksInLevel),
@@ -66,7 +67,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
 
   const generatePracticeTopics = (level: TTMIKLevel, weekInLevel: number, totalWeeksInLevel: number): string[] => {
     const topics: string[] = [];
-    
+
     if (level <= 2) {
       topics.push('Pronunciation practice', 'Basic conversation drills');
     } else if (level <= 4) {
@@ -86,7 +87,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
 
   const generateDramaContent = (level: TTMIKLevel, weekInLevel: number, totalWeeksInLevel: number): string[] => {
     const content: string[] = [];
-    
+
     if (level === 1) {
       content.push('Basic greeting scenes from romantic comedies');
     } else if (level === 2) {
@@ -119,7 +120,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
   return (
     <div className="space-y-6">
       {/* Overview */}
-      <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-white p-6 rounded-lg">
+      <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-black p-6 rounded-lg">
         <h2 className="text-2xl font-bold mb-4">Your Learning Roadmap</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
@@ -184,11 +185,10 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
           {roadmap.weeklyGoals.map((week) => (
             <div
               key={week.week}
-              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                selectedWeek === week.week
-                  ? 'border-[var(--background)] bg-blue-50'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
+              className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${selectedWeek === week.week
+                ? 'border-[var(--background)] bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300'
+                }`}
               onClick={() => setSelectedWeek(selectedWeek === week.week ? null : week.week)}
             >
               <div className="flex justify-between items-center mb-3">
@@ -197,7 +197,7 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
                   Focus
                 </span>
               </div>
-              
+
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">📚 Vocabulary:</span>
@@ -222,9 +222,9 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
                       ))}
                     </ul>
                   </div>
-                  
+
                   <div>
-                    <p className="text-xs font-semibold text-gray-700 mb-2">🎬 Drama Content:</p>
+                    <p className="text-xs font-semibold text-gray-700 mb-2">🎬 Youtube Content:</p>
                     <ul className="text-xs text-gray-600 space-y-1">
                       {week.dramaContent.map((content, index) => (
                         <li key={index} className="flex items-center">
@@ -233,6 +233,21 @@ export default function CurriculumRoadmap({ currentLevel, targetLevel, timeframe
                         </li>
                       ))}
                     </ul>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-100 flex flex-col gap-2">
+                    <Link
+                      href={`/study-plan/${roadmap.currentLevel}/${week.week}?vocab=${week.vocabulary}&grammar=${week.grammar}`}
+                      className="w-full py-2 bg-[var(--lemon)] text-black text-center rounded-lg text-sm font-semibold shadow-sm hover:bg-[var(--lightbeige)] transition-colors"
+                    >
+                      📝 Open Weekly Study Plan
+                    </Link>
+                    <Link
+                      href="/learning"
+                      className="w-full py-2 bg-gray-100 text-gray-700 text-center rounded-lg text-sm font-semibold shadow-sm hover:bg-gray-200 transition-colors"
+                    >
+                      🎬 Jump to Video Study
+                    </Link>
                   </div>
                 </div>
               )}

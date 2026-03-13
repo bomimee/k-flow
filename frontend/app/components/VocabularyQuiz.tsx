@@ -130,6 +130,8 @@ import { fetchMixedQuizWords } from '@/app/services/vocabulary';
 import { saveQuizSession } from '@/app/services/quiz';
 import type { QuizAchievement } from '@/app/services/quiz';
 import { useAuth } from '@/app/hooks/useAuth';
+import { SpacedRepetitionSystem } from '@/app/services/spacedRepetition';
+import { fetchDueItems, updateSRSProgress } from '@/app/services/srs';
 
 interface VocabularyQuizProps {
   mode: QuizMode;
@@ -157,21 +159,51 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       try {
         setIsLoading(true);
         setShowPronunciationHint(false);
-        const result = await fetchMixedQuizWords({
-          userId: user?.id,
-          level: config.levelRange ? config.levelRange[0] : 1,
-          categories: config.categories,
-          limit: config.questionCount,
-        });
 
-        const fetchedVocab = result.items;
-        setSavedWordCount(result.saved_count);
+        let mergedVocab: VocabularyItem[] = [];
+        let fetchedSavedCount = 0;
 
-        if (fetchedVocab.length === 0) {
+        // "Review" mode or intelligent matching => Try SRS due items first
+        if (config.mode === 'review' && user?.id) {
+          try {
+            const dueItems = await fetchDueItems(user.id);
+            if (dueItems && dueItems.length > 0) {
+              const sortedDue = SpacedRepetitionSystem.sortByPriority(dueItems);
+              mergedVocab.push(...sortedDue.slice(0, config.questionCount));
+            }
+          } catch (err) {
+            console.warn('Failed to fetch due items, falling back to mixed approach:', err);
+          }
+        }
+
+        // Fill remaining slots with mixed DB/Saved items
+        const remainingNeeded = config.questionCount - mergedVocab.length;
+        if (remainingNeeded > 0) {
+          const result = await fetchMixedQuizWords({
+            userId: user?.id,
+            level: config.levelRange ? config.levelRange[0] : 1,
+            categories: config.categories,
+            limit: remainingNeeded,
+          });
+          fetchedSavedCount = result.saved_count;
+
+          // Merge without exact duplicates
+          const existingIds = new Set(mergedVocab.map(v => v.id));
+          for (const item of result.items) {
+            if (!existingIds.has(item.id)) {
+              mergedVocab.push(item);
+              existingIds.add(item.id);
+            }
+          }
+        }
+
+        setSavedWordCount(fetchedSavedCount);
+
+        if (mergedVocab.length === 0) {
           throw new Error('No vocabulary found for this level.');
         }
 
-        initializeQuiz(fetchedVocab);
+        initializeQuiz(mergedVocab);
         setIsLoading(false);
       } catch (err) {
         console.error('Failed to load quiz:', err);
@@ -307,6 +339,21 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
       : selectedAnswer === currentQuestion.correctAnswer;
     const points = isCorrect ? currentQuestion.points : 0;
 
+    // --- Update SRS progress via SM-2 Algorithm ---
+    if (user?.id && !currentQuestion.vocabulary.id.startsWith('saved-')) {
+      const quality = SpacedRepetitionSystem.getQualityRating(timeSpent, 0, isCorrect);
+      // Ensure we have a baseline SRSData object to start from
+      const currentSRS = currentQuestion.vocabulary.srsData || {
+        interval: 1, repetitions: 0, easeFactor: 2.5, successRate: 0, 
+        nextReview: new Date(), lastReview: new Date()
+      };
+      const newSRS = SpacedRepetitionSystem.calculateNextReview(currentSRS, quality);
+      
+      // Fire-and-forget update in background
+      updateSRSProgress(user.id, currentQuestion.vocabulary.id, newSRS)
+        .catch(e => console.error("Update SRS Background Error:", e));
+    }
+
     const answer: QuizAnswer = {
       questionId: currentQuestion.id,
       userAnswer: selectedAnswer,
@@ -414,6 +461,19 @@ export default function VocabularyQuiz({ mode, config, onQuizComplete }: Vocabul
 
   const handleTimeout = () => {
     if (!session || !currentQuestion) return;
+
+    // --- Update SRS progress via SM-2 Algorithm for Timeout (Quality 0) ---
+    if (user?.id && !currentQuestion.vocabulary.id.startsWith('saved-')) {
+      const currentSRS = currentQuestion.vocabulary.srsData || {
+        interval: 1, repetitions: 0, easeFactor: 2.5, successRate: 0, 
+        nextReview: new Date(), lastReview: new Date()
+      };
+      // Timeout is a total blackout, quality = 0
+      const newSRS = SpacedRepetitionSystem.calculateNextReview(currentSRS, 0);
+      
+      updateSRSProgress(user.id, currentQuestion.vocabulary.id, newSRS)
+        .catch(e => console.error("Update SRS Background Error:", e));
+    }
 
     const answer: QuizAnswer = {
       questionId: currentQuestion.id,

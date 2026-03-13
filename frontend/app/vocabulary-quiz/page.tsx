@@ -2,8 +2,10 @@
 
 import ModernNavigation from "@/app/components/ModernNavigation";
 import VocabularyQuiz from "@/app/components/VocabularyQuiz";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { QuizResult } from "@/app/types/vocabulary";
+import { useAuth } from "@/app/hooks/useAuth";
+import { fetchUserProfile } from "@/app/services/users";
 
 export default function VocabularyQuizPage() {
   const [showSetup, setShowSetup] = useState(true);
@@ -15,6 +17,17 @@ export default function VocabularyQuizPage() {
     level: 1,
   });
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchUserProfile(user.id).then(profile => {
+        if (profile) {
+          setQuizConfig(prev => ({ ...prev, level: profile.ttmik_level }));
+        }
+      });
+    }
+  }, [user]);
 
   const handleStartQuiz = () => {
     setShowSetup(false);

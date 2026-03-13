@@ -4,21 +4,26 @@ import { useState, useEffect } from 'react';
 import { getSavedItems, deleteSavedItem, SavedItem } from '../services/savedItems';
 import ModernNavigation from '../components/ModernNavigation';
 import { AudioButton } from '../components/AudioButton';
+import { useAuth } from '../hooks/useAuth';
 
 export default function SavedItemsPage() {
+    const { user, loading: authLoading } = useAuth();
     const [items, setItems] = useState<SavedItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'all' | 'vocabulary' | 'expression' | 'grammar'>('all');
 
     useEffect(() => {
+        if (authLoading) return;
+        
         const fetchItems = async () => {
             setLoading(true);
-            const data = await getSavedItems('default_user');
+            const userId = user?.id || 'default_user';
+            const data = await getSavedItems(userId);
             setItems(data);
             setLoading(false);
         };
         fetchItems();
-    }, []);
+    }, [user, authLoading]);
 
     const handleDelete = async (id?: string) => {
         if (!id) return;
