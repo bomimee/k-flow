@@ -19,6 +19,7 @@ export default function DramaPracticePage() {
   const [activeClip, setActiveClip] = useState<VideoClip | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [showPractice, setShowPractice] = useState(false);
+  const [mediaType, setMediaType] = useState<'regular' | 'shorts'>('regular');
   const [trendingVideos, setTrendingVideos] = useState<any[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
 
@@ -59,7 +60,7 @@ export default function DramaPracticePage() {
     setError(null);
 
     try {
-      const result = await analyzeYouTube(youtubeUrl, level);
+      const result = await analyzeYouTube(youtubeUrl, level, mediaType);
       setAnalysisResult(result);
       const clip = mapAnalysisToVideoClip(result);
       setActiveClip(clip);
@@ -124,10 +125,27 @@ export default function DramaPracticePage() {
                 </div>
               </div>
 
-              {/* Available Dramas */}
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">🔥 한국 인기 동영상 Top 10 (추천!)</h3>
-                <p className="text-sm text-gray-500">영상 클릭 시 아래 인풋 필드에 링크가 자동으로 입력됩니다.</p>
+              {/* Mode Selection Tabs */}
+              <div className="flex bg-gray-100 p-1 rounded-xl mb-6">
+                <button
+                  onClick={() => setMediaType('regular')}
+                  className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${mediaType === 'regular' ? 'bg-white shadow-sm text-red-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  📺 TV Shows / Dramas
+                </button>
+                <button
+                  onClick={() => setMediaType('shorts')}
+                  className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${mediaType === 'shorts' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-500 hover:text-gray-700'}`}
+                >
+                  📱 Shorts / Reels <span className="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded text-xs">New</span>
+                </button>
+              </div>
+
+              {/* Available Dramas - Only show in regular mode for now */}
+              {mediaType === 'regular' && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-lg">🔥 한국 인기 동영상 Top 10 (추천!)</h3>
+                  <p className="text-sm text-gray-500">영상 클릭 시 아래 인풋 필드에 링크가 자동으로 입력됩니다.</p>
                 {loadingTrending ? (
                   <div className="text-center py-8 text-gray-500 animate-pulse">인기 동영상을 불러오는 중입니다...</div>
                 ) : (
@@ -156,6 +174,17 @@ export default function DramaPracticePage() {
                   </div>
                 )}
               </div>
+              )}
+
+              {/* Shorts Features Description */}
+              {mediaType === 'shorts' && (
+                <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-6">
+                  <h3 className="font-bold text-indigo-900 mb-2">⚡ 1-Minute Shorts Learning</h3>
+                  <p className="text-sm text-indigo-800">
+                    Paste a YouTube Shorts link to quickly extract key expressions. The player will be optimized for vertical viewing and focus on rapid mimicking practice.
+                  </p>
+                </div>
+              )}
 
               {/* Features */}
               <div className="space-y-4">
@@ -195,7 +224,7 @@ export default function DramaPracticePage() {
               <form onSubmit={handleStartPractice} className="space-y-6">
                 <div>
                   <label htmlFor="youtubeUrl" className="block text-sm font-medium text-gray-700 mb-2">
-                    YouTube Video URL
+                    {mediaType === 'regular' ? 'YouTube Video URL' : 'YouTube Shorts URL'}
                   </label>
                   <input
                     id="youtubeUrl"
@@ -204,10 +233,12 @@ export default function DramaPracticePage() {
                     value={youtubeUrl}
                     onChange={(e) => setYoutubeUrl(e.target.value)}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none transition-all"
+                    className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 outline-none transition-all ${mediaType === 'regular' ? 'focus:ring-red-500 focus:border-red-500' : 'focus:ring-indigo-500 focus:border-indigo-500'}`}
                   />
                   <p className="mt-2 text-sm text-gray-500">
-                    Enter the URL of a Korean variety show or drama clip to analyze.
+                    {mediaType === 'regular' 
+                      ? "Enter the URL of a Korean variety show or drama." 
+                      : "Enter the URL of a YouTube Short (e.g., https://www.youtube.com/shorts/...)"}
                   </p>
                 </div>
 
@@ -238,7 +269,9 @@ export default function DramaPracticePage() {
                   disabled={loading}
                   className={`w-full py-4 text-lg font-bold rounded-xl shadow-lg transition-all active:scale-[0.98] flex items-center justify-center space-x-2 ${loading
                     ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-r from-red-500 to-pink-600 text-white hover:from-red-600 hover:to-pink-700 shadow-red-500/25"
+                    : mediaType === 'regular'
+                      ? "bg-gradient-to-r from-red-500 to-pink-600 text-white hover:from-red-600 hover:to-pink-700 shadow-red-500/25"
+                      : "bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-indigo-500/25"
                     }`}
                 >
                   {loading ? (
@@ -351,7 +384,7 @@ export default function DramaPracticePage() {
             </div>
             <button
               onClick={() => setShowPractice(true)}
-              className="bg-red-500 hover:bg-red-600 active:scale-95 text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl font-bold transition-all flex items-center gap-2"
+              className={`text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl font-bold transition-all flex items-center gap-2 ${activeClip?.videoId?.length && (youtubeUrl.includes('shorts') || mediaType === 'shorts') ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-red-500 hover:bg-red-600'}`}
             >
               <span>🎙️</span>
               <span>Start Speaking Practice</span>
@@ -378,6 +411,7 @@ export default function DramaPracticePage() {
         <DramaSentenceMemorizer
           clips={activeClip ? [activeClip] : []}
           onSessionComplete={handleSessionComplete}
+          isShorts={mediaType === 'shorts' || youtubeUrl.includes('shorts')}
         />
       </main>
     </div>

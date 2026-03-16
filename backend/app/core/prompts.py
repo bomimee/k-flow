@@ -202,8 +202,8 @@ Examples:
   "practice_exercises": {
     "fill_in_the_blank": [
       {
-        "sentence": "Korean sentence with ___",
-        "answer": "Correct answer",
+        "sentence": "Korean sentence with ___ (ONLY using sentences/words from key_expressions or vocabulary above)",
+        "answer": "Correct answer (MUST strictly be a word/grammar taught in this analysis)",
         "hint": "Hint for learner"
       }
     ],
@@ -212,13 +212,13 @@ Examples:
         "question": "Question in English",
         "options": ["Option A", "Option B", "Option C"],
         "correct_answer": "A",
-        "explanation": "Why this is correct"
+        "explanation": "Why this is correct (Must test a point taught above)"
       }
     ],
     "translation_practice": [
       {
         "english": "English sentence",
-        "korean_answer": "Korean translation",
+        "korean_answer": "Korean translation (Using expressions taught above)",
         "alternative_answers": ["Other valid translations"]
       }
     ],
@@ -263,6 +263,7 @@ Examples:
 5. **Pronunciation**: Include real pronunciation (연음, 격음화, etc.)
 6. **Valid JSON**: Ensure output is properly formatted JSON
 7. **No Placeholders**: Fill all fields with actual content from the transcript
+8. **STRICT EXERCISE RULE**: Every answer in `practice_exercises` (fill-in-the-blank, multiple choice, translation, listening) MUST exactly match a word, expression, or grammar point that was ALREADY extracted and listed in the `key_expressions` or `vocabulary_by_category` sections from this video. NEVER invent a fill-in-the-blank question for a word that wasn't explicitly taught above.
 
 ## Analysis Priority
 1. Extract expressions that appeared in the transcript

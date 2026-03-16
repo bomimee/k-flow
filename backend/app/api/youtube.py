@@ -1,7 +1,9 @@
 from fastapi import APIRouter, HTTPException
 from app.services.youtube import (
     extract_video_id, 
+    check_video_duration,
     get_korean_transcript, 
+    get_korean_transcript_raw,
     download_audio, 
     extract_audio_timestamps, 
     extract_audio_clips
@@ -35,6 +37,7 @@ def get_trending_youtube():
             "part": "snippet",
             "chart": "mostPopular",
             "regionCode": "KR",
+            "videoCategoryId": "24",
             "maxResults": 10,
             "key": api_key
         }
@@ -57,6 +60,11 @@ def get_trending_youtube():
 @router.post("/analyze-youtube")
 def analyze_youtube(req: YouTubeRequest):
     video_id = extract_video_id(req.url)
+    
+    # ⏱️ Check video duration (Shorts max 2 mins, Regular max 5 mins)
+    max_mins = 2 if req.video_type == "shorts" else 5
+    check_video_duration(req.url, max_minutes=max_mins)
+
     transcript = None
     source = None
     audio_file = None  # 오디오 파일 경로 저장용
@@ -142,7 +150,32 @@ def analyze_youtube(req: YouTubeRequest):
             os.remove(audio_file)
         raise HTTPException(status_code=500, detail="LLM 분석 실패")
 
-    # 4️⃣ 오디오 클립 추출 (오디오 파일이 있을 경우에만)
+    # 4️⃣ 자막 타임스탬프 매칭 (자막이 원본인 경우)
+    if source == "subtitle" and "key_expressions" in analysis:
+        print("🕒 자막에서 타임스탬프 매칭 시작...")
+        transcript_raw = get_korean_transcript_raw(video_id)
+        if transcript_raw:
+            for expr in analysis.get("key_expressions", []):
+                target_text = expr.get("example_in_context", "") or expr.get("expression", "")
+                if not target_text:
+                    continue
+                
+                target_clean = target_text.replace(" ", "")
+                best_match = None
+                for t in transcript_raw:
+                    t_clean = t["text"].replace(" ", "")
+                    if (target_clean in t_clean or t_clean in target_clean) and len(t_clean) > 2:
+                        best_match = t
+                        break
+                        
+                if best_match:
+                    expr["audio_timestamp"] = {
+                        "start": best_match["start"],
+                        "end": best_match["start"] + best_match.get("duration", 3.0),
+                        "text": best_match["text"]
+                    }
+
+    # 5️⃣ 오디오 클립 추출 (오디오 다운로드 STT인 경우)
     audio_clip_info = {}
     if audio_file and os.path.exists(audio_file):
         try:

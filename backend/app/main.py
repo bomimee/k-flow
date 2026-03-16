@@ -30,6 +30,7 @@ from app.api.habits import router as habits_router
 from app.api.quiz import router as quiz_router
 from app.api.users import router as users_router
 from app.api.grammar import router as grammar_router
+from app.api.practice import router as practice_router
 
 app.include_router(youtube_router, prefix="/api", tags=["YouTube"])
 app.include_router(vocabulary_router, prefix="/api", tags=["Vocabulary"])
@@ -39,6 +40,8 @@ app.include_router(habits_router, prefix="/api", tags=["Habits"])
 app.include_router(quiz_router, prefix="/api", tags=["Quiz"])
 app.include_router(users_router, prefix="/api", tags=["Users"])
 app.include_router(grammar_router, prefix="/api", tags=["Grammar"])
+app.include_router(practice_router, prefix="/api", tags=["Practice"])
+
 @app.get("/")
 def read_root():
     return {"message": "Korean Learning API is running"}

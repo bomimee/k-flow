@@ -106,6 +106,55 @@ def speech_to_text(audio_path: str) -> str:
     result = model.transcribe(audio_path, fp16=False)
     return result["text"]
 
+def evaluate_pronunciation(target_sentence: str, audio_path: str) -> dict:
+    user_text = speech_to_text(audio_path)
+    
+    prompt = f"""
+    You are a Korean pronunciation coach.
+    The learner was supposed to say: "{target_sentence}"
+    The Speech-to-Text model heard: "{user_text}"
+    
+    Evaluate the learner's pronunciation based on the differences.
+    Return a strictly formatted JSON object with:
+    {{
+       "score": <an integer between 0 and 100 representing accuracy>,
+       "feedback": ["A short list (1-2) of positive points"],
+       "improvements": ["A short list (1-2) of constructive feedback or what they need to fix"]
+    }}
+    
+    If the text matches very closely, give a high score. If there are major mistakes or completely different words, lower it.
+    Only return valid JSON syntax, NO markdown.
+    """
+    
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="You are a helpful language tutor.",
+                temperature=0.3,
+            ),
+        )
+
+        content = response.text
+        cleaned = extract_json(content)
+        
+        if not cleaned:
+            return {
+                "score": 0,
+                "feedback": ["Could not properly evaluate the audio."],
+                "improvements": ["Please try recording again."]
+            }
+            
+        return json.loads(cleaned)
+    except Exception as e:
+        print("Pronunciation Eval Error:", e)
+        return {
+            "score": 0,
+            "feedback": ["Error during evaluation."],
+            "improvements": ["Please try again later."]
+        }
+
 
 def extract_json(text: str) -> str | None:
     if not text:

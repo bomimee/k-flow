@@ -18,9 +18,10 @@ declare global {
 interface DramaSentenceMemorizerProps {
   clips: VideoClip[];
   onSessionComplete: (session: MemorizationSession) => void;
+  isShorts?: boolean;
 }
 
-export default function DramaSentenceMemorizer({ clips, onSessionComplete }: DramaSentenceMemorizerProps) {
+export default function DramaSentenceMemorizer({ clips, onSessionComplete, isShorts = false }: DramaSentenceMemorizerProps) {
   const [session, setSession] = useState<MemorizationSession | null>(null);
   const [currentClip, setCurrentClip] = useState<VideoClip | null>(null);
   const [currentSentence, setCurrentSentence] = useState<DramaSentence | null>(null);
@@ -261,37 +262,56 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
   };
 
   const processRecording = async (audioBlob: Blob) => {
-    // Simulate pronunciation analysis
-    const mockAnalysis = {
-      overallScore: Math.floor(Math.random() * 30) + 70, // 70-100
-      phonemeScores: [],
-      feedback: ['Good rhythm!', 'Clear pronunciation'],
-      improvements: ['Work on intonation']
-    };
+    setRecordingStatus('processing');
 
-    const recording: UserRecording = {
-      sentenceId: currentSentence?.id || '',
-      audioBlob,
-      accuracy: mockAnalysis.overallScore,
-      pronunciation: mockAnalysis,
-      timestamp: new Date()
-    };
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      formData.append('target_sentence', currentSentence?.korean || '');
 
-    setUserRecording(recording);
-    setRecordingStatus('idle');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000'}/api/evaluate-pronunciation`, {
+        method: 'POST',
+        body: formData,
+      });
 
-    // Update session
-    if (session) {
-      const updatedSession = {
-        ...session,
-        userRecordings: [...session.userRecordings, recording],
-        progress: {
-          ...session.progress,
-          sentencesPracticed: session.progress.sentencesPracticed + 1,
-          averageAccuracy: ((session.progress.averageAccuracy * session.progress.sentencesPracticed) + mockAnalysis.overallScore) / (session.progress.sentencesPracticed + 1)
-        }
+      if (!res.ok) throw new Error('Evaluation failed');
+      const data = await res.json();
+      
+      const analysis = {
+        overallScore: data.score,
+        phonemeScores: [],
+        feedback: data.feedback,
+        improvements: data.improvements
       };
-      setSession(updatedSession);
+
+      const recording: UserRecording = {
+        sentenceId: currentSentence?.id || '',
+        audioBlob,
+        accuracy: analysis.overallScore,
+        pronunciation: analysis,
+        timestamp: new Date()
+      };
+
+      setUserRecording(recording);
+      setRecordingStatus('idle');
+
+      // Update session
+      if (session) {
+        const updatedSession = {
+          ...session,
+          userRecordings: [...session.userRecordings, recording],
+          progress: {
+            ...session.progress,
+            sentencesPracticed: session.progress.sentencesPracticed + 1,
+            averageAccuracy: ((session.progress.averageAccuracy * session.progress.sentencesPracticed) + analysis.overallScore) / (session.progress.sentencesPracticed + 1)
+          }
+        };
+        setSession(updatedSession);
+      }
+    } catch (error) {
+      console.error('Error processing recording:', error);
+      alert('Failed to evaluate pronunciation. Please try again.');
+      setRecordingStatus('idle');
     }
   };
 
@@ -392,7 +412,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
       </div>
 
       {/* Video Player */}
-      <div className="relative bg-black rounded-lg overflow-hidden mb-6 aspect-video">
+      <div className={`relative bg-black rounded-lg overflow-hidden mb-6 ${isShorts ? 'aspect-[9/16] max-w-sm mx-auto' : 'aspect-video w-full'}`}>
         <div id="youtube-player" className="w-full h-full"></div>
 
         {/* Subtitles */}
@@ -533,20 +553,34 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete }: Dra
 
       {/* Recording Results */}
       {userRecording && (
-        <div className="bg-blue-50 p-4 rounded-lg mb-6">
-          <h3 className="font-semibold mb-2">🎤 Recording Analysis</h3>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold text-blue-600">
-                {userRecording.accuracy}%
+        <div className="bg-blue-50 p-6 rounded-lg mb-6 shadow-sm border border-blue-100">
+          <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
+            <span>🎤</span> Recording Analysis
+          </h3>
+          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+            <div className="text-center md:text-left bg-white p-4 rounded-xl shadow-sm min-w-[120px]">
+              <p className="text-4xl font-black text-blue-600">
+                {userRecording.accuracy}<span className="text-xl">%</span>
               </p>
-              <p className="text-sm text-gray-600">Accuracy Score</p>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-1">Accuracy</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600 mb-1">Feedback:</p>
-              {userRecording.pronunciation.feedback.map((feedback, index) => (
-                <p key={index} className="text-sm text-green-600">✓ {feedback}</p>
-              ))}
+            <div className="flex-1 space-y-3 w-full">
+              {userRecording.pronunciation.feedback && userRecording.pronunciation.feedback.length > 0 && (
+                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
+                  <p className="text-xs font-bold text-green-800 uppercase tracking-wider mb-1 flex items-center gap-1"><span>✨</span> Strengths</p>
+                  {userRecording.pronunciation.feedback.map((feedback, index) => (
+                    <p key={index} className="text-sm text-green-700 font-medium ml-1">✓ {feedback}</p>
+                  ))}
+                </div>
+              )}
+              {userRecording.pronunciation.improvements && userRecording.pronunciation.improvements.length > 0 && (
+                <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
+                  <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1 flex items-center gap-1"><span>💡</span> Needs Work</p>
+                  {userRecording.pronunciation.improvements.map((improvement, index) => (
+                    <p key={index} className="text-sm text-orange-700 font-medium ml-1">↳ {improvement}</p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -11,7 +11,10 @@ export function useAudioPlayer() {
       // 이전 재생 중지
       window.speechSynthesis.cancel();
       
-      const utterance = new SpeechSynthesisUtterance(text);
+      // 슬래시(/) 등의 기호를 쉼표로 바꿔서 '슬래시'라고 읽는 것을 방지하고 한 박자 쉬도록 처리
+      const cleanText = text.replace(/\//g, ',');
+      
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = lang;
       utterance.rate = 0.9; // 약간 느리게
       

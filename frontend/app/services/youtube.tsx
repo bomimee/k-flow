@@ -6,10 +6,11 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export async function analyzeYouTube(
   url: string,
   level: string,
+  mediaType: 'regular' | 'shorts' = 'regular'
 ): Promise<AnalysisResult> {
   try {
     console.log('🔵 Calling API:', `${API_BASE_URL}/api/analyze-youtube`);
-    console.log('📦 Request:', { url, level });
+    console.log('📦 Request:', { url, level, video_type: mediaType });
 
     const response = await fetch(`${API_BASE_URL}/api/analyze-youtube`, {
       method: 'POST',
@@ -18,7 +19,8 @@ export async function analyzeYouTube(
       },
       body: JSON.stringify({
         url,
-        level
+        level,
+        video_type: mediaType
       }),
     });
 
@@ -26,7 +28,7 @@ export async function analyzeYouTube(
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('❌ API Error:', errorData);
+      console.warn('⚠️ API Error:', errorData);
       throw new Error(
         errorData.detail || `API request failed with status ${response.status}`
       );
@@ -37,7 +39,7 @@ export async function analyzeYouTube(
 
     return data;
   } catch (error) {
-    console.error('❌ analyzeYouTube error:', error);
+    console.warn('⚠️ analyzeYouTube error:', error);
     throw error;
   }
 }

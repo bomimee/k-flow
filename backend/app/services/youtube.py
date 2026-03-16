@@ -24,13 +24,44 @@ def extract_video_id(url: str) -> str:
 
     raise ValueError("Invalid YouTube URL format")
 
+def check_video_duration(url: str, max_minutes: int = 3):
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': True,
+    }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            duration = info.get('duration', 0)
+            
+            if duration > max_minutes * 60:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Video is too long ({int(duration/60)}m {duration%60}s). Please use a video under {max_minutes} minutes for optimal analysis."
+                )
+            return duration
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Failed to check duration: {e}")
+        # If we can't fetch duration, just let it pass or raise an error. We'll let it pass smoothly relying on other checks if yt-dlp flat extract fails.
+        return 0
+
+
+def get_korean_transcript_raw(video_id: str):
+    try:
+        api = YouTubeTranscriptApi()
+        return api.get_transcript(video_id, languages=["ko"])
+    except Exception as e:
+        print("❌ Raw transcript error:", e)
+        return None
 
 def get_korean_transcript(video_id: str):
     try:
-        api = YouTubeTranscriptApi()
-        transcript = api.get_transcript(video_id, languages=["ko"])
-        return " ".join([t["text"] for t in transcript])
-    except NoTranscriptFound:
+        transcript = get_korean_transcript_raw(video_id)
+        if transcript:
+            return " ".join([t["text"] for t in transcript])
         return None
     except Exception as e:
         print("❌ Transcript error:", e)
