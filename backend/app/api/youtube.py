@@ -4,6 +4,7 @@ from app.services.youtube import (
     check_video_duration,
     get_korean_transcript, 
     get_korean_transcript_raw,
+    get_korean_transcript_structured,
     download_audio, 
     extract_audio_timestamps, 
     extract_audio_clips
@@ -139,9 +140,15 @@ def analyze_youtube(req: YouTubeRequest):
         except Exception as e:
             print("❌ DB 자막 저장 실패:", e)
 
-    # 3️⃣ LLM 분석
+    # 3️⃣ LLM 분석 (자막 우선, 없으면 STT 자막 사용)
     try:
-        analysis = analyze_transcript_with_llm(transcript, req.level)
+        if source == "subtitle":
+            # [NEW] AI에게 ID가 포함된 정밀 자막을 보냄
+            llm_transcript = get_korean_transcript_structured(video_id)
+        else:
+            llm_transcript = transcript # STT 결과
+
+        analysis = analyze_transcript_with_llm(llm_transcript, req.level)
         print("✅ LLM 분석 결과 받음")
     except Exception as e:
         print("❌ LLM ERROR:", e)
@@ -150,30 +157,74 @@ def analyze_youtube(req: YouTubeRequest):
             os.remove(audio_file)
         raise HTTPException(status_code=500, detail="LLM 분석 실패")
 
-    # 4️⃣ 자막 타임스탬프 매칭 (자막이 원본인 경우)
+    # 4️⃣ 정밀 타임스탬프 매칭 (자막인 경우)
     if source == "subtitle" and "key_expressions" in analysis:
-        print("🕒 자막에서 타임스탬프 매칭 시작...")
+        print("🕒 자막 기반 정밀 매칭 시작...")
         transcript_raw = get_korean_transcript_raw(video_id)
+        
         if transcript_raw:
+            from difflib import SequenceMatcher
+            import re
+
+            def clean_text(t):
+                return re.sub(r'[^가-힣a-zA-Z0-9]', '', t)
+
+            def clean_korean_only(t):
+                return re.sub(r'[^가-힣]', '', t)
+
             for expr in analysis.get("key_expressions", []):
-                target_text = expr.get("example_in_context", "") or expr.get("expression", "")
-                if not target_text:
-                    continue
+                original_expr = expr.get("expression", "")
+                target_text = clean_text(original_expr)
+                target_ko = clean_korean_only(original_expr)
+                segment_id = expr.get("segment_id")
                 
-                target_clean = target_text.replace(" ", "")
-                best_match = None
-                for t in transcript_raw:
-                    t_clean = t["text"].replace(" ", "")
-                    if (target_clean in t_clean or t_clean in target_clean) and len(t_clean) > 2:
-                        best_match = t
-                        break
+                best_match_info = None
+                best_score = 0
+
+                def search_in_range(r):
+                    nonlocal best_match_info, best_score
+                    for i in r:
+                        combined_text = ""
+                        combined_start = transcript_raw[i]["start"]
                         
-                if best_match:
-                    expr["audio_timestamp"] = {
-                        "start": best_match["start"],
-                        "end": best_match["start"] + best_match.get("duration", 3.0),
-                        "text": best_match["text"]
-                    }
+                        # 최대 4개 세그먼트까지 결합하여 탐색
+                        for j in range(i, min(i + 4, len(transcript_raw))):
+                            combined_text += transcript_raw[j]["text"]
+                            
+                            s_ko = SequenceMatcher(None, target_ko, clean_korean_only(combined_text)).ratio()
+                            s_full = SequenceMatcher(None, target_text, clean_text(combined_text)).ratio()
+                            
+                            current_score = max(s_ko, s_full)
+                            
+                            # 보너스: 타겟 한글이 포함되어 있으면 점수 상향 (짧은 문구 대응)
+                            if target_ko and len(target_ko) > 1 and target_ko in clean_korean_only(combined_text):
+                                current_score = max(current_score, 0.9)
+
+                            if current_score > best_score:
+                                best_score = current_score
+                                best_match_info = {
+                                    "start": combined_start,
+                                    "end": transcript_raw[j]["start"] + transcript_raw[j]["duration"],
+                                    "text": combined_text
+                                }
+
+                # 1차 시도: segment_id 주변 집중 탐색 (+/- 15)
+                if segment_id is not None:
+                    search_in_range(range(max(0, segment_id - 15), min(len(transcript_raw), segment_id + 20)))
+                
+                # 2차 시도: 점수가 낮으면(0.7 미만) 전체 텍스트에서 글로벌 검색
+                if best_score < 0.7:
+                    print(f"🔍 Low confidence ({best_score:.2f}) for '{target_ko}' - starting Global Search...")
+                    search_in_range(range(len(transcript_raw)))
+                            
+                if best_match_info and best_score > 0.65:
+                    # 리드인 버퍼 추가 (0.3초로 상향하여 맥락 더 확보)
+                    best_match_info["start"] = max(0, best_match_info["start"] - 0.3)
+                    best_match_info["end"] = best_match_info["end"] + 0.3
+                    expr["audio_timestamp"] = best_match_info
+                    print(f"🎯 Match Found (Score: {best_score:.2f}): '{target_ko}' -> {best_match_info['start']:.2f}s")
+                else:
+                    print(f"❌ Match Failed: '{original_expr[:30]}'")
 
     # 5️⃣ 오디오 클립 추출 (오디오 다운로드 STT인 경우)
     audio_clip_info = {}

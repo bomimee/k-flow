@@ -47,30 +47,48 @@ export async function analyzeYouTube(
 export function mapAnalysisToVideoClip(result: AnalysisResult): VideoClip {
   const { analysis, video_id } = result;
 
-  const sentences: DramaSentence[] = (analysis.key_expressions || []).map((exp, index) => {
-    const startTime = exp.audio_timestamp?.start ?? (index * 5);
-    const endTime = exp.audio_timestamp?.end ?? (startTime + 3);
+  // Heuristic to filter out simple English loanwords that don't add much learning value
+  const isLoanword = (korean: string, english: string) => {
+    const k = korean.toLowerCase().replace(/ /g, '');
+    const e = english.toLowerCase().replace(/ /g, '');
+    // Common transliterations that are too obvious
+    const obvious = ['메시지', '커피', '핸드폰', '스마트폰', '인터넷', '파일', '데이터'];
+    if (obvious.includes(korean)) return true;
+    // Simple phonetic match check can be complex, so we'll stick to 'obvious' for now
+    // or if the English meaning is just the phonetic transcription
+    return false;
+  };
 
-    return {
-      id: `sentence-${index}`,
-      korean: exp.expression,
-      english: exp.meaning_en,
-      pronunciation: exp.pronunciation,
-      videoId: video_id,
-      startTime,
-      endTime,
-      difficulty: 'medium',
-      level: 1, // Default level
-      context: exp.usage_context || 'Conversation from video',
-      characters: ['Speaker'], // Default
-      dramaTitle: analysis.video_context?.topic || 'YouTube Video',
-      episode: 'Special',
-      genre: 'variety',
-      culturalNotes: analysis.video_context?.key_cultural_notes?.join(', '),
-      vocabulary: [], // Can be extracted from exp if needed
-      grammar: [], // Can be extracted from Exp if needed
-    };
-  });
+  const sentences: DramaSentence[] = (analysis.key_expressions || [])
+    .filter(exp => !isLoanword(exp.expression, exp.meaning_en))
+    .map((exp, index) => {
+      if (!exp.audio_timestamp) {
+        console.warn(`🕒 Missing timestamp for: "${exp.expression}". Using default.`);
+      }
+
+      const startTime = exp.audio_timestamp?.start ?? (index * 5);
+      const endTime = exp.audio_timestamp?.end ?? (startTime + 3);
+
+      return {
+        id: `sentence-${index}-${Date.now()}`, // Unique ID for each session
+        korean: exp.expression,
+        english: exp.meaning_en,
+        pronunciation: exp.pronunciation,
+        videoId: video_id,
+        startTime,
+        endTime,
+        difficulty: 'medium',
+        level: 1, // Default level
+        context: exp.usage_context || 'Conversation from video',
+        characters: ['Speaker'], // Default
+        dramaTitle: analysis.video_context?.topic || 'YouTube Video',
+        episode: 'Special',
+        genre: 'variety',
+        culturalNotes: analysis.video_context?.key_cultural_notes?.join(', '),
+        vocabulary: [],
+        grammar: [],
+      };
+    });
 
   return {
     id: video_id,

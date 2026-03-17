@@ -8,16 +8,17 @@ You analyze Korean exactly as it is spoken in real life, not textbook Korean.
   - beginner / intermediate / advanced
 
 ━━━━━━━━━━━━━━━━━━━━━━
-## Your Task
+## ## Transcript (Structured)
+The transcript below is provided as a list of segments with unique IDs: `[ID] Text`
+{transcript}
+
+━━━━━━━━━━━━━━━━━━━━━━
+## ## Your Task
 Analyze the Korean transcript below and create **level-appropriate, realistically difficult learning materials**.
 Your analysis MUST strictly follow the difficulty rules for each level.
 
 ━━━━━━━━━━━━━━━━━━━━━━
-## Transcript
-{transcript}
-
-━━━━━━━━━━━━━━━━━━━━━━
-## 🚨 VERY IMPORTANT: Level Difficulty Rules (STRICT)
+## ## 🚨 VERY IMPORTANT: Level Difficulty Rules (STRICT)
 
 ### 🔰 Beginner
 Use ONLY **very common, daily-life Korean** that a true beginner would realistically learn first.
@@ -112,14 +113,15 @@ Examples:
   
   "key_expressions": [
     {
-      "expression": "Korean expression",
+      "expression": "Full Korean sentence from the transcript",
+      "segment_id": 0, // The ID of the primary transcript segment containing this sentence
       "pronunciation": "Romanized pronunciation",
       "pronunciation_notes": "Sound changes: [actual pronunciation]",
       "meaning_en": "English meaning",
       "formality": "formal/casual/neutral",
       "usage_context": "When and how to use this",
       "similar_expressions": ["Alternative 1", "Alternative 2"],
-      "example_in_context": "Full sentence from transcript"
+      "example_in_context": "The verbatim sentence as it appears in the transcript"
     }
   ],
   
@@ -251,26 +253,29 @@ Examples:
 }
 ```
 
+## 🚨 CRITICAL EXCLUSION: Proper Nouns & Names
+- **Do NOT** include proper nouns (Person names like '박찬욱', '박철광', specific brand names, or specific city names) in the `vocabulary_by_category`.
+- **Do NOT** treat proper names as words to be studied or practiced.
+- When an expression contains a name, ensure the name is accurately transcribed from the transcript, but the **focus** of the learning should be on the surrounding verbs, grammar, and generic phrases.
+- **NEVER** substitute or guess a person's name. If a name appears in the transcript, use it verbatim as the subject/object of the sentence, but explain that the name is a specific person and not a key vocabulary word.
+- **Preference**: If possible, choose expressions that do not revolve entirely around a specific person's name as the primary learning point.
+
 ## Important Rules
 
-1. **Authenticity First**: Focus on how Korean is ACTUALLY spoken, not just textbook Korean
-2. **Level Appropriate**: Adjust complexity to {user_level}
-   - Beginner: 5-8 key expressions, 3-5 basic grammar points
-   - Intermediate: 8-12 expressions, 5-8 grammar points
-   - Advanced: 12-15+ expressions, complex nuances
-3. **Cultural Context**: Always explain cultural background when relevant
-4. **Practical Usage**: Every item should be something learners can actually use
-5. **Pronunciation**: Include real pronunciation (연음, 격음화, etc.)
-6. **Valid JSON**: Ensure output is properly formatted JSON
-7. **No Placeholders**: Fill all fields with actual content from the transcript
-8. **STRICT EXERCISE RULE**: Every answer in `practice_exercises` (fill-in-the-blank, multiple choice, translation, listening) MUST exactly match a word, expression, or grammar point that was ALREADY extracted and listed in the `key_expressions` or `vocabulary_by_category` sections from this video. NEVER invent a fill-in-the-blank question for a word that wasn't explicitly taught above.
+1. **Authenticity First**: Focus on how Korean is ACTUALLY spoken, not just textbook Korean.
+2. **Level Appropriate**: Adjust complexity to {user_level}.
+3. **Cultural Context**: Always explain cultural background when relevant.
+4. **Practical Usage**: Every item should be something learners can actually use.
+5. **Pronunciation**: Include real pronunciation (연음, 격음화, etc.).
+6. **Valid JSON**: Ensure output is properly formatted JSON.
+7. **No Placeholders**: Fill all fields with actual content from the transcript.
+8. **STRICT EXERCISE RULE**: Every answer in `practice_exercises` MUST be from `key_expressions` or `vocabulary_by_category`.
+9. **Verbatim & Segment Constraint**: The `expression` MUST match the text in the specified `segment_id` **exactly**. Do not combine multiple unrelated segments into one expression unless they form a single natural sentence. The `segment_id` allows the system to find the exact video timestamp.
+10. **Avoid Loanword Redundancy**: Do not extract obvious Konglish (메시지, 커피 등). Prioritize native Korean.
 
 ## Analysis Priority
-1. Extract expressions that appeared in the transcript
-2. Focus on patterns that repeat multiple times
-3. Highlight uniquely Korean expressions that don't translate literally
-4. Note any slang, buzzwords, or trending expressions
-5. Identify mistakes learners commonly make with these patterns
-
-Begin analysis now.
+1. Use the [ID] provided in the transcript to fill the `segment_id` field.
+2. Focus on full sentences that span one or two contiguous segments.
+3. Priority goes to expressions that are complete and meaningful on their own.
+4. Note any slang, buzzwords, or trending expressions.
 """

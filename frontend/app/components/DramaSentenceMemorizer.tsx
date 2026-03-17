@@ -5,7 +5,8 @@ import type {
   SubtitleMode,
   MemorizationSession,
   UserRecording,
-  MimickingExercise
+  MimickingExercise,
+  MimickingStep
 } from '@/app/types/drama';
 
 declare global {
@@ -33,9 +34,11 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [apiReady, setApiReady] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'processing'>('idle');
   const [userRecording, setUserRecording] = useState<UserRecording | null>(null);
   const [mimickingExercise, setMimickingExercise] = useState<MimickingExercise | null>(null);
+  const [playerError, setPlayerError] = useState<{ code: number; message: string } | null>(null);
 
   const playerRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -54,7 +57,15 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
       firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
     }
 
+    const checkAPI = setInterval(() => {
+      if (window.YT && window.YT.Player) {
+        setApiReady(true);
+        clearInterval(checkAPI);
+      }
+    }, 500);
+
     return () => {
+      clearInterval(checkAPI);
       if (timeUpdateIntervalRef.current) {
         clearInterval(timeUpdateIntervalRef.current);
       }
@@ -62,44 +73,91 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   }, []);
 
   useEffect(() => {
-    if (currentClip && window.YT && window.YT.Player) {
-      if (playerRef.current) {
-        playerRef.current.loadVideoById({
-          videoId: currentClip.videoId,
-          startSeconds: currentSentence?.startTime || 0
-        });
+    if (currentClip && apiReady && window.YT && window.YT.Player) {
+      console.log('📺 Initializing/Updating Player for Video:', currentClip.videoId);
+      if (playerRef.current && typeof playerRef.current.loadVideoById === 'function') {
+        try {
+          playerRef.current.loadVideoById({
+            videoId: currentClip.videoId,
+            startSeconds: currentSentence?.startTime || 0
+          });
+          playerRef.current.pauseVideo();
+        } catch (e) {
+          console.error('❌ Failed to load video by ID:', e);
+          createPlayer();
+        }
       } else {
         createPlayer();
       }
     }
-  }, [currentClip]);
+  }, [currentClip?.videoId, apiReady]); // Use specific videoId to avoid unnecessary re-runs
 
   const createPlayer = () => {
-    if (!currentClip) return;
+    if (!currentClip || !currentClip.videoId) {
+      console.warn('⚠️ Cannot create player: videoId is missing');
+      return;
+    }
 
-    playerRef.current = new window.YT.Player('youtube-player', {
-      height: '100%',
-      width: '100%',
-      videoId: currentClip.videoId,
-      playerVars: {
-        autoplay: 0,
-        controls: 0,
-        rel: 0,
-        showinfo: 0,
-        modestbranding: 1,
-        disablekb: 1,
-        fs: 0
-      },
-      events: {
-        onReady: onPlayerReady,
-        onStateChange: onPlayerStateChange
-      }
-    });
+    console.log('🏗️ Creating new YT.Player instance...');
+
+    // Clear existing player if its container is gone
+    const container = document.getElementById('youtube-player');
+    if (!container) {
+      console.error('❌ youtube-player container not found in DOM');
+      return;
+    }
+
+    try {
+      playerRef.current = new window.YT.Player('youtube-player', {
+        height: '100%',
+        width: '100%',
+        videoId: currentClip.videoId,
+        playerVars: {
+          autoplay: 0,
+          controls: 1, // Temporarily enabled to see YouTube internal errors
+          rel: 0,
+          showinfo: 0,
+          modestbranding: 1,
+          disablekb: 0,
+          fs: 1,
+          origin: window.location.origin
+        },
+        events: {
+          onReady: (e: any) => {
+            console.log('✅ Player Ready');
+            onPlayerReady(e);
+          },
+          onStateChange: (e: any) => {
+            console.log('🔄 Player State Change:', e.data);
+            onPlayerStateChange(e);
+          },
+          onError: (e: any) => {
+            // Using warn instead of error to prevent dev tools from flagging this as a crash
+            console.warn('📺 YouTube Player API signaled an error:', e.data);
+
+            let message = "An error occurred with the video player.";
+            if (e.data === 101 || e.data === 150) {
+              message = "This video cannot be played here because the owner has disabled embedding. 🔒";
+            } else if (e.data === 100) {
+              message = "The video was not found. It might have been deleted or set to private.";
+            } else if (e.data === 2 || e.data === 5) {
+              message = "Invalid video parameter or HTML5 player error.";
+            }
+
+            setPlayerError({ code: e.data, message });
+          }
+        }
+      });
+    } catch (err) {
+      console.warn('⚠️ Non-critical error during YT.Player construction:', err);
+      setPlayerError({ code: -1, message: "Could not initialize player. Please try another video." });
+    }
   };
 
   const onPlayerReady = (event: any) => {
     if (currentSentence) {
-      event.target.seekTo(currentSentence.startTime, true);
+      // 리드인 버퍼(-0.3s) 적용하여 첫 마디 잘림 방지
+      event.target.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
     }
   };
 
@@ -116,17 +174,38 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
 
   const startTimeUpdates = () => {
     if (timeUpdateIntervalRef.current) clearInterval(timeUpdateIntervalRef.current);
-    timeUpdateIntervalRef.current = setInterval(() => {
-      if (playerRef.current && playerRef.current.getCurrentTime) {
-        const time = playerRef.current.getCurrentTime();
-        setCurrentTime(time);
+    stopTimeUpdates(); // Clear any existing interval
 
-        if (currentSentence && time >= currentSentence.endTime) {
-          playerRef.current.pauseVideo();
-          setIsPlaying(false);
+    let lastCheckTime = Date.now();
+
+    timeUpdateIntervalRef.current = setInterval(() => {
+      if (playerRef.current && playerRef.current.getCurrentTime && isPlaying) {
+        const currentTime = playerRef.current.getCurrentTime();
+        setCurrentTime(currentTime); // Keep updating the state
+        const now = Date.now();
+
+        if (currentSentence) {
+          // 1. 종료 지점 체크 (정밀)
+          if (currentTime >= currentSentence.endTime) {
+            console.log('🛑 Precise stop at end time:', currentTime);
+            playerRef.current.pauseVideo();
+            setIsPlaying(false);
+            stopTimeUpdates();
+            return;
+          }
+
+          // 2. 싱크 이탈 감시 (Watchdog) - 500ms 마다 체크
+          if (now - lastCheckTime > 500) {
+            lastCheckTime = now;
+            // 현재 문장 범위를 크게 벗어났다면 재정렬 (리드인 고려)
+            if (currentTime < currentSentence.startTime - 1.0 || currentTime > currentSentence.endTime + 0.5) {
+              console.warn('⚠️ Sync Drift Detected! Re-seeking...', { currentTime, target: currentSentence.startTime });
+              playerRef.current.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
+            }
+          }
         }
       }
-    }, 100);
+    }, 50); // 고정밀 체크 (50ms)
   };
 
   const stopTimeUpdates = () => {
@@ -160,7 +239,12 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
     setSession(newSession);
     setCurrentClip(clips[0]);
     setCurrentSentence(clips[0].sentences[0]);
-    createMimickingExercise(clips[0].sentences[0]);
+    updateExercise(clips[0].sentences[0]);
+  };
+
+  const updateExercise = (sentence: DramaSentence) => {
+    const exercise = createMimickingExercise(sentence);
+    setMimickingExercise(exercise);
   };
 
   const createMimickingExercise = (sentence: DramaSentence): MimickingExercise => {
@@ -208,17 +292,88 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
     return exercise;
   };
 
-  const handlePlayPause = () => {
-    if (!playerRef.current || !currentSentence) return;
+  const handleStepAction = (step: MimickingStep, index: number) => {
+    if (!currentSentence || !mimickingExercise) return;
 
-    if (isPlaying) {
-      playerRef.current.pauseVideo();
-    } else {
-      const currentPos = playerRef.current.getCurrentTime();
-      if (currentPos >= currentSentence.endTime || currentPos < currentSentence.startTime) {
-        playerRef.current.seekTo(currentSentence.startTime, true);
+    if (step.type === 'record') {
+      if (recordingStatus === 'idle') startRecording();
+      else if (recordingStatus === 'recording') stopRecording();
+      return;
+    }
+
+    if (playerRef.current) {
+      // Set playback rate based on step type
+      let rate = 1.0;
+      if (step.type === 'slow') rate = 0.8;
+      else if (step.type === 'breakdown') rate = 0.7;
+
+      try {
+        if (playerRef.current.setPlaybackRate) {
+          playerRef.current.setPlaybackRate(rate);
+        }
+        playerRef.current.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
+        playerRef.current.playVideo();
+      } catch (err) {
+        console.error('Playback action failed:', err);
       }
-      playerRef.current.playVideo();
+    }
+
+    // Mark current step as completed
+    setMimickingExercise({
+      ...mimickingExercise,
+      steps: mimickingExercise.steps.map((s, i) =>
+        i === index ? { ...s, completed: true } : s
+      )
+    });
+  };
+
+  const handlePlayPause = () => {
+    console.log('▶️ Play/Pause clicked');
+    // If player is not ready, try to create it manually on click
+    if (!playerRef.current) {
+      console.log('🔄 Player was not initialized. Attempting manual creation...');
+      if (window.YT && window.YT.Player) {
+        createPlayer();
+        // Give it a tiny bit of time to initialize then play
+        setTimeout(() => {
+          if (playerRef.current && playerRef.current.playVideo) {
+            playerRef.current.playVideo();
+          }
+        }, 500);
+      } else {
+        console.error('❌ YouTube API not ready yet');
+      }
+      return;
+    }
+
+    if (!currentSentence) {
+      console.warn('⚠️ No current sentence selected');
+      return;
+    }
+
+    try {
+      if (isPlaying) {
+        console.log('⏸️ Pausing video');
+        playerRef.current.pauseVideo();
+      } else {
+        console.log('▶️ Playing video');
+        const currentPos = typeof playerRef.current.getCurrentTime === 'function'
+          ? playerRef.current.getCurrentTime()
+          : 0;
+
+        if (currentPos >= currentSentence.endTime || currentPos < currentSentence.startTime - 0.5) {
+          playerRef.current.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
+        }
+        // 속도가 느리게 설정되어 있었다면 1.0으로 복구
+        if (playerRef.current.setPlaybackRate) {
+          playerRef.current.setPlaybackRate(1.0);
+        }
+        playerRef.current.playVideo();
+      }
+    } catch (err) {
+      console.error('❌ Error in handlePlayPause:', err);
+      // Fallback: Re-create player if something went wrong
+      createPlayer();
     }
   };
 
@@ -276,7 +431,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
 
       if (!res.ok) throw new Error('Evaluation failed');
       const data = await res.json();
-      
+
       const analysis = {
         overallScore: data.score,
         phonemeScores: [],
@@ -325,7 +480,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
       const nextSentence = currentClip.sentences[nextSentenceIndex];
       setCurrentSentence(nextSentence);
       setSession({ ...session, currentSentenceIndex: nextSentenceIndex });
-      createMimickingExercise(nextSentence);
+      updateExercise(nextSentence);
       setUserRecording(null);
       if (playerRef.current) {
         playerRef.current.seekTo(nextSentence.startTime, true);
@@ -343,7 +498,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
           currentClipIndex: nextClipIndex,
           currentSentenceIndex: 0
         });
-        createMimickingExercise(nextClip.sentences[0]);
+        updateExercise(nextClip.sentences[0]);
         setUserRecording(null);
       } else {
         // Session complete
@@ -394,19 +549,19 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+    <div className="max-w-4xl mx-auto p-8 bg-[var(--background)] rounded-3xl shadow-[0_30px_100px_rgba(0,0,0,0.2)] overflow-hidden border border-white/10">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-10 pb-6 border-b border-black/5">
         <div>
-          <h2 className="text-2xl font-bold">Drama Sentence Practice</h2>
-          <p className="text-gray-600">{currentClip.title}</p>
+          <h2 className="text-4xl font-black text-[var(--font-dark)] tracking-tight">Practice Sessions</h2>
+          <p className="text-[var(--lightblue)] font-extrabold">{currentClip.title}</p>
         </div>
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-600">
-            Sentence {session.currentSentenceIndex + 1} of {currentClip.sentences.length}
+        <div className="flex items-center space-x-6">
+          <div className="text-sm font-black text-white bg-slate-900 px-5 py-2.5 rounded-full shadow-lg">
+            Sentence {session.currentSentenceIndex + 1} / {currentClip.sentences.length}
           </div>
-          <div className="text-sm text-gray-600">
-            Clip {session.currentClipIndex + 1} of {clips.length}
+          <div className="text-sm font-black text-black bg-[var(--lemon)] px-5 py-2.5 rounded-full shadow-lg border border-black/5">
+            Clip {session.currentClipIndex + 1} / {clips.length}
           </div>
         </div>
       </div>
@@ -415,31 +570,71 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
       <div className={`relative bg-black rounded-lg overflow-hidden mb-6 ${isShorts ? 'aspect-[9/16] max-w-sm mx-auto' : 'aspect-video w-full'}`}>
         <div id="youtube-player" className="w-full h-full"></div>
 
-        {/* Subtitles */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pointer-events-none">
-          <div className="text-center text-white">
-            <p className="text-2xl font-bold mb-2">{getSubtitleText()}</p>
-            {subtitleMode.showRomanization && (
-              <p className="text-lg opacity-80">[{currentSentence.pronunciation}]</p>
+        {/* Error Overlay */}
+        {playerError && (
+          <div className="absolute inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-8 text-center">
+            <div className="text-5xl mb-4">🚫</div>
+            <h3 className="text-white text-xl font-bold mb-2">Video Unplayable</h3>
+            <p className="text-gray-300 mb-6">{playerError.message}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.open(`https://www.youtube.com/watch?v=${currentClip.videoId}`, '_blank')}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 transition-colors"
+              >
+                Watch on YouTube 📺
+              </button>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-gray-700 text-white rounded-lg font-bold hover:bg-gray-800 transition-colors"
+              >
+                Try Another Video 🔄
+              </button>
+            </div>
+            {playerError.code === 150 && (
+              <p className="text-xs text-gray-500 mt-4">
+                Tip: This often happens with official TV show clips. Try searching for "Shorts" or different uploaders of the same clip.
+              </p>
             )}
           </div>
-        </div>
+        )}
+
+        {/* Subtitles */}
+        {!playerError && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6 pointer-events-none">
+            <div className="text-center text-white">
+              <p className="text-2xl font-bold mb-2">{getSubtitleText()}</p>
+              {subtitleMode.showRomanization && (
+                <p className="text-lg opacity-80">[{currentSentence.pronunciation}]</p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Video Controls */}
-        <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center pointer-events-none">
-          <button
-            onClick={handlePlayPause}
-            className="bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition-colors pointer-events-auto"
-          >
-            {isPlaying ? '⏸️' : '▶️'}
-          </button>
+        {!playerError && (
+          <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('▶️ Play Button Clicked (UI Overlay)');
+                handlePlayPause();
+              }}
+              className="bg-white/90 text-black p-4 rounded-full hover:bg-white transition-all shadow-xl active:scale-95 pointer-events-auto border-2 border-white/50"
+            >
+              {isPlaying ? (
+                <span className="text-2xl" aria-hidden="true">⏸️</span>
+              ) : (
+                <span className="text-2xl" aria-hidden="true">▶️</span>
+              )}
+            </button>
 
-          <div className="flex items-center space-x-2 bg-black/40 px-3 py-1 rounded-full">
-            <span className="text-white text-sm">
-              {currentTime.toFixed(1)}s / {currentSentence.endTime.toFixed(1)}s
-            </span>
+            <div className="flex items-center space-x-2 bg-black/60 px-4 py-2 rounded-full backdrop-blur-sm pointer-events-auto">
+              <span className="text-white text-sm font-mono font-bold">
+                {currentTime.toFixed(1)}s / {currentSentence.endTime.toFixed(1)}s
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Subtitle Mode Controls */}
@@ -451,8 +646,8 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
               key={mode}
               onClick={() => handleSubtitleModeChange(mode)}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${subtitleMode.mode === mode
-                  ? 'bg-[var(--background)] text-white'
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                ? 'bg-[var(--background)] text-black'
+                : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
             >
               {mode === 'korean' && '🇰🇷 Korean'}
@@ -477,7 +672,6 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
           <label className="flex items-center">
             <input
               type="checkbox"
-              checked={subtitleMode.showPronunciation}
               onChange={(e) => setSubtitleMode({ ...subtitleMode, showPronunciation: e.target.checked })}
               className="mr-2"
             />
@@ -486,153 +680,266 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
         </div>
       </div>
 
+      {/* Target Sentence Display - High Contrast Refactor */}
+      <div className="bg-black/30 border-2 border-white/20 backdrop-blur-2xl p-10 rounded-[2.5rem] mb-12 shadow-[0_20px_50px_rgba(0,0,0,0.3)] group transition-all duration-500 hover:border-[var(--lemon)]/30">
+        <div className="flex justify-between items-center mb-8">
+          <span className="bg-[var(--lemon)] text-black px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-[0_0_20px_rgba(239,248,137,0.4)]">
+            🎯 Target Sentence
+          </span>
+          <div className="flex gap-2">
+            <span className="px-4 py-1.5 rounded-xl text-[10px] font-black bg-white/10 text-white border border-white/20 uppercase tracking-widest">
+              {currentSentence.difficulty} LEVEL
+            </span>
+          </div>
+        </div>
+
+        <h2 className="text-5xl font-black mb-8 leading-[1.2] text-white drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] tracking-tight">
+          {currentSentence.korean}
+        </h2>
+
+        <div className="space-y-4 border-l-[6px] border-[var(--lemon)] pl-8 py-2 bg-white/5 rounded-r-2xl">
+          <p className="text-2xl italic font-black text-[var(--lemon)] drop-shadow-sm">
+            "{currentSentence.english}"
+          </p>
+          {currentSentence.pronunciation && (
+            <p className="text-sm font-mono text-[var(--font-dark)] font-black uppercase tracking-widest opacity-80">
+              [{currentSentence.pronunciation}]
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Mimicking Exercise */}
       {mimickingExercise && (
-        <div className="bg-gradient-to-r from-[var(--lemon)] to-[var(--lightbeige)] p-6 rounded-lg mb-6">
-          <h3 className="text-xl font-bold mb-4">🎭 Mimicking Exercise</h3>
+        <div className="bg-[var(--lightblue)] border border-white/20 backdrop-blur-xl p-8 rounded-3xl mb-10 shadow-2xl overflow-hidden relative group">
+          <div className="flex justify-between items-center mb-8">
+            <h3 className="text-2xl font-black flex items-center gap-3 text-white drop-shadow-lg">
+              <span className="p-2 bg-black/40 rounded-xl shadow-inner text-2xl">🎭</span> Mimicking Practice
+            </h3>
+            <span className="text-[10px] font-black px-4 py-2 rounded-full text-black bg-[var(--lemon)] uppercase tracking-widest shadow-[0_0_20px_rgba(239,248,137,0.4)]">
+              Step {mimickingExercise.currentStep + 1} / 5
+            </span>
+          </div>
 
           <div className="space-y-4">
-            {mimickingExercise.steps.map((step, index) => (
-              <div
-                key={step.type}
-                className={`p-4 rounded-lg border-2 transition-all ${index === mimickingExercise.currentStep
-                    ? 'border-[var(--background)] bg-white'
-                    : index < mimickingExercise.currentStep
-                      ? 'border-green-500 bg-green-50'
-                      : 'border-gray-200 bg-gray-50'
-                  }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold">{step.title}</h4>
-                    <p className="text-sm text-gray-600 mt-1">{step.instruction}</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {index < mimickingExercise.currentStep && (
-                      <span className="text-green-500">✓</span>
-                    )}
-                    {index === mimickingExercise.currentStep && (
-                      <button
-                        onClick={() => {
-                          if (step.type === 'record') {
-                            if (recordingStatus === 'idle') {
-                              startRecording();
-                            } else if (recordingStatus === 'recording') {
-                              stopRecording();
-                            }
-                          } else {
-                            // Handle other step types
-                            const nextStep = index + 1;
-                            setMimickingExercise({
-                              ...mimickingExercise,
-                              currentStep: nextStep,
-                              steps: mimickingExercise.steps.map((s, i) => ({
-                                ...s,
-                                completed: i <= nextStep
-                              }))
-                            });
-                          }
-                        }}
-                        className="bg-[var(--background)] text-white px-4 py-2 rounded-lg font-medium hover:bg-[var(--lightblue)] transition-colors"
-                      >
-                        {step.type === 'record' && (
-                          recordingStatus === 'idle' ? '🎤 Record' :
-                            recordingStatus === 'recording' ? '⏹️ Stop' :
-                              '⏳ Processing...'
-                        )}
-                        {step.type !== 'record' && 'Start'}
-                      </button>
-                    )}
+            {mimickingExercise.steps.map((step, index) => {
+              const isActive = index === mimickingExercise.currentStep;
+              const isCompleted = index < mimickingExercise.currentStep;
+
+              return (
+                <div
+                  key={step.type}
+                  onClick={() => {
+                    setMimickingExercise({
+                      ...mimickingExercise,
+                      currentStep: index
+                    });
+                  }}
+                  className={`p-6 rounded-2xl border transition-all duration-300 cursor-pointer ${isActive
+                    ? 'border-[var(--lemon)] bg-white shadow-2xl transform scale-[1.02] ring-2 ring-[var(--lemon)]/50'
+                    : 'border-white/10 bg-black/20 hover:border-white/30 hover:bg-black/40'
+                    }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg transition-all duration-500 shadow-md ${isCompleted ? 'bg-green-500 text-white' :
+                        isActive ? 'text-black bg-[var(--lemon)]' : 'bg-white/5 text-white/40 border border-white/10'
+                        }`}>
+                        {isCompleted ? '✓' : index + 1}
+                      </div>
+                      <div>
+                        <h4 className={`text-xl font-black transition-colors ${isActive ? 'text-black' : 'text-white'}`}>
+                          {step.title}
+                        </h4>
+                        <p className={`text-sm font-bold transition-colors ${isActive ? 'text-black/60' : 'text-white/50'}`}>
+                          {step.instruction}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {isActive && (
+                        <div className="flex gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStepAction(step, index);
+                            }}
+                            className={`px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-2xl transition-all active:scale-95 ${step.type === 'record'
+                              ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse border-2 border-red-400/30'
+                              : 'bg-black text-[var(--lemon)] hover:bg-black/90'
+                              }`}
+                          >
+                            {step.type === 'record' ? (
+                              recordingStatus === 'idle' ? '🎤 Record Now' :
+                                recordingStatus === 'recording' ? '⏹️ Stop' : '⏳ Processing...'
+                            ) : (
+                              step.completed ? '▶️ Play Again' : 'Start →'
+                            )}
+                          </button>
+
+                          {step.completed && index < mimickingExercise.steps.length - 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMimickingExercise({
+                                  ...mimickingExercise,
+                                  currentStep: index + 1
+                                });
+                              }}
+                              className="px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest bg-green-600 hover:bg-green-700 text-white shadow-2xl transition-all active:scale-95 animate-in fade-in slide-in-from-left-4"
+                            >
+                              Next →
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
 
       {/* Recording Results */}
       {userRecording && (
-        <div className="bg-blue-50 p-6 rounded-lg mb-6 shadow-sm border border-blue-100">
-          <h3 className="font-bold text-blue-900 mb-4 flex items-center gap-2">
-            <span>🎤</span> Recording Analysis
+        <div className="bg-white/10 border border-white/20 backdrop-blur-xl p-8 rounded-3xl mb-10 shadow-2xl relative overflow-hidden group">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--lemon)]/10 blur-[60px] rounded-full -mr-16 -mt-16 group-hover:bg-[var(--lemon)]/20 transition-colors duration-700"></div>
+
+          <h3 className="text-xl font-black text-[var(--brown)] mb-8 flex items-center gap-3">
+            <span className="p-2 bg-white/10 rounded-xl">🎤</span> Analysis Report
           </h3>
-          <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
-            <div className="text-center md:text-left bg-white p-4 rounded-xl shadow-sm min-w-[120px]">
-              <p className="text-4xl font-black text-blue-600">
-                {userRecording.accuracy}<span className="text-xl">%</span>
+
+          <div className="flex flex-col md:flex-row gap-8 items-stretch justify-between">
+            <div className="text-center md:text-left bg-black/40 border border-white/10 p-6 rounded-3xl shadow-inner min-w-[160px] flex flex-col justify-center">
+              <p className="text-6xl font-black text-[var(--lemon)] drop-shadow-[0_0_15px_rgba(239,248,137,0.3)]">
+                {userRecording.accuracy}<span className="text-2xl opacity-60">%</span>
               </p>
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-1">Accuracy</p>
+              <p className="text-[10px] font-black text-[var(--brown)] uppercase tracking-[0.2em] mt-3">Score</p>
             </div>
-            <div className="flex-1 space-y-3 w-full">
+
+            <div className="flex-1 space-y-4">
               {userRecording.pronunciation.feedback && userRecording.pronunciation.feedback.length > 0 && (
-                <div className="bg-green-50 p-3 rounded-lg border border-green-100">
-                  <p className="text-xs font-bold text-green-800 uppercase tracking-wider mb-1 flex items-center gap-1"><span>✨</span> Strengths</p>
-                  {userRecording.pronunciation.feedback.map((feedback, index) => (
-                    <p key={index} className="text-sm text-green-700 font-medium ml-1">✓ {feedback}</p>
-                  ))}
+                <div className="bg-green-500/10 p-5 rounded-2xl border border-green-500/20 backdrop-blur-sm">
+                  <p className="text-[10px] font-black text-green-600 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-600"></span> Perfect Highlights
+                  </p>
+                  <div className="space-y-2">
+                    {userRecording.pronunciation.feedback.map((feedback, index) => (
+                      <p key={index} className="text-sm text-[var(--brown)] font-bold flex items-center gap-2">
+                        <span className="text-green-600">✦</span> {feedback}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
               {userRecording.pronunciation.improvements && userRecording.pronunciation.improvements.length > 0 && (
-                <div className="bg-orange-50 p-3 rounded-lg border border-orange-100">
-                  <p className="text-xs font-bold text-orange-800 uppercase tracking-wider mb-1 flex items-center gap-1"><span>💡</span> Needs Work</p>
-                  {userRecording.pronunciation.improvements.map((improvement, index) => (
-                    <p key={index} className="text-sm text-orange-700 font-medium ml-1">↳ {improvement}</p>
-                  ))}
+                <div className="bg-orange-500/10 p-5 rounded-2xl border border-orange-500/20 backdrop-blur-sm">
+                  <p className="text-[10px] font-black text-orange-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-orange-400"></span> Pro Improvements
+                  </p>
+                  <div className="space-y-2">
+                    {userRecording.pronunciation.improvements.map((improvement, index) => (
+                      <p key={index} className="text-sm text-[var(--brown)] font-bold flex items-center gap-2">
+                        <span className="text-orange-400">⚡</span> {improvement}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Decision Section */}
+          <div className="mt-10 flex flex-col sm:flex-row gap-5 pt-8 border-t border-white/20">
+            <button
+              onClick={() => {
+                setUserRecording(null);
+                if (currentSentence) updateExercise(currentSentence);
+                if (playerRef.current) {
+                  playerRef.current.seekTo(currentSentence?.startTime || 0, true);
+                  playerRef.current.playVideo();
+                }
+              }}
+              className="flex-1 px-8 py-4 rounded-2xl font-black bg-black text-[var(--lemon)] border-2 border-[var(--lemon)]/20 hover:bg-black/90 hover:scale-[1.02] transition-all active:scale-95 flex items-center justify-center gap-3 shadow-2xl group/retry"
+            >
+              <span className="group-hover/retry:rotate-180 transition-transform duration-500 text-xl">🔄</span> Retry Practice
+            </button>
+            <button
+              onClick={moveToNextSentence}
+              disabled={!session || session.currentSentenceIndex >= currentClip.sentences.length - 1}
+              className={`flex-1 px-8 py-4 rounded-2xl font-black text-black shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 hover:scale-[1.02] ${!session || session.currentSentenceIndex >= currentClip.sentences.length - 1
+                ? 'bg-white/5 text-white/20 cursor-not-allowed border border-white/10'
+                : 'bg-[var(--lemon)] hover:brightness-110'
+                }`}
+            >
+              <span className="text-lg">Next Sentence</span>
+              <span className="text-2xl">➡️</span>
+            </button>
           </div>
         </div>
       )}
 
       {/* Sentence Context */}
-      <div className="bg-gray-50 p-4 rounded-lg mb-6">
-        <h3 className="font-semibold mb-3">Context & Analysis</h3>
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Context:</p>
-            <p className="text-sm text-gray-600">{currentSentence.context}</p>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Characters:</p>
-            <p className="text-sm text-gray-600">{currentSentence.characters.join(', ')}</p>
-          </div>
-
-          {currentSentence.culturalNotes && (
+      <div className="bg-[var(--primary-dark)] border border-white/10 backdrop-blur-sm p-8 rounded-3xl mb-10 overflow-hidden relative">
+        <h3 className="text-xl font-black text-[var(--font)] mb-6 flex items-center gap-3">
+          <span className="p-2 bg-white/10 rounded-xl">📚</span> Context & Insights
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+          <div className="space-y-6">
             <div>
-              <p className="text-sm font-semibold text-gray-700">Cultural Notes:</p>
-              <p className="text-sm text-gray-600">{currentSentence.culturalNotes}</p>
+              <p className="text-[10px] font-black text-[var(--lightblue)] uppercase tracking-[0.2em] mb-2">Narrative Context</p>
+              <p className="text-[var(--font)] leading-relaxed font-medium">{currentSentence.context}</p>
             </div>
-          )}
 
-          <div>
-            <p className="text-sm font-semibold text-gray-700">Difficulty:</p>
-            <span className={`px-2 py-1 rounded text-xs font-medium ${currentSentence.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                currentSentence.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-red-100 text-red-700'
-              }`}>
-              {currentSentence.difficulty}
-            </span>
+            <div>
+              <p className="text-[10px] font-black text-[var(--lightblue)] uppercase tracking-[0.2em] mb-2">Key Characters</p>
+              <div className="flex flex-wrap gap-2">
+                {currentSentence.characters.map((char, i) => (
+                  <span key={i} className="px-3 py-1 bg-white/10 border border-white/10 rounded-lg text-xs font-bold text-[var(--font)]">
+                    {char}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {currentSentence.culturalNotes && (
+              <div>
+                <p className="text-[10px] font-black text-[var(--lightblue)] uppercase tracking-[0.2em] mb-2">Cultural Notes</p>
+                <div className="bg-[var(--font)]/5 border border-[var(--lemon)]/20 p-4 rounded-2xl">
+                  <p className="text-sm text-[var(--font)]/90 leading-relaxed italic">"{currentSentence.culturalNotes}"</p>
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-[10px] font-black text-[var(--lightblue)] uppercase tracking-[0.2em] mb-2">Linguistic Challenge</p>
+              <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${currentSentence.difficulty === 'easy' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                currentSentence.difficulty === 'medium' ? 'bg-[var(--lemon)]/20 text-[var(--lemon)] border border-[var(--lemon)]/30' :
+                  'bg-red-500/20 text-red-400 border border-red-500/30'
+                }`}>
+                {currentSentence.difficulty} Level
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <div className="flex justify-between">
+      <div className="flex justify-center mt-6">
         <button
-          onClick={() => setShowTranscript(!showTranscript)}
-          className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+          onClick={() => {
+            console.log('➡️ Move to next sentence');
+            moveToNextSentence();
+          }}
+          className="px-12 py-4 bg-[var(--lemon)] text-black rounded-xl font-bold hover:bg-[var(--primary-dark)] hover:text-white transition-all shadow-lg active:scale-95 flex items-center gap-3 text-lg"
         >
-          {showTranscript ? 'Hide' : 'Show'} Transcript
-        </button>
-
-        <button
-          onClick={moveToNextSentence}
-          className="px-6 py-3 bg-[var(--background)] text-white rounded-lg font-medium hover:bg-[var(--lightblue)] transition-colors"
-        >
-          Next Sentence →
+          <span>Next Sentence</span>
+          <span className="text-xl">➡️</span>
         </button>
       </div>
     </div>
