@@ -86,9 +86,15 @@ export class SpacedRepetitionSystem {
    * Sort items by priority (due date + difficulty)
    */
   static sortByPriority(items: VocabularyItem[]): VocabularyItem[] {
+    const getSafeTime = (d: Date | null | undefined): number => {
+      if (!d) return 0;
+      const t = d instanceof Date ? d.getTime() : new Date(d).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+
     return items.sort((a, b) => {
       // First by due date (earliest first)
-      const dueDiff = a.srsData.nextReview.getTime() - b.srsData.nextReview.getTime();
+      const dueDiff = getSafeTime(a.srsData.nextReview) - getSafeTime(b.srsData.nextReview);
       if (dueDiff !== 0) return dueDiff;
 
       // Then by success rate (lower success rate first)

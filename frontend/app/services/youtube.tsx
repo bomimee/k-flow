@@ -61,13 +61,17 @@ export function mapAnalysisToVideoClip(result: AnalysisResult): VideoClip {
 
   const sentences: DramaSentence[] = (analysis.key_expressions || [])
     .filter(exp => !isLoanword(exp.expression, exp.meaning_en))
-    .map((exp, index) => {
+    .filter(exp => {
+      // ⚠️ audio_timestamp가 없으면 아예 제외 - dummy 값으로 재생하면 싱크가 완전히 깨짐
       if (!exp.audio_timestamp) {
-        console.warn(`🕒 Missing timestamp for: "${exp.expression}". Using default.`);
+        console.warn(`⏭️ Skipping "${exp.expression}" - no timestamp found.`);
+        return false;
       }
-
-      const startTime = exp.audio_timestamp?.start ?? (index * 5);
-      const endTime = exp.audio_timestamp?.end ?? (startTime + 3);
+      return true;
+    })
+    .map((exp, index) => {
+      const startTime = exp.audio_timestamp!.start;
+      const endTime = exp.audio_timestamp!.end;
 
       return {
         id: `sentence-${index}-${Date.now()}`, // Unique ID for each session

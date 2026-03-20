@@ -156,6 +156,9 @@ export default function ModernNavigation() {
                     <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--background)] transition-colors">
                       <span className="text-lg w-6 text-center">👤</span> My Info
                     </Link>
+                    <Link href="/my-videos" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--background)] transition-colors">
+                      <span className="text-lg w-6 text-center">📺</span> My Videos
+                    </Link>
                     <Link href="/curriculum" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--background)] transition-colors">
                       <span className="text-lg w-6 text-center">🗺️</span> My Curriculum
                     </Link>
@@ -281,6 +284,14 @@ export default function ModernNavigation() {
                   >
                     <span className="text-lg w-6 text-center">👤</span>
                     <span>My Info</span>
+                  </Link>
+                  <Link
+                    href="/my-videos"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="block px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg flex items-center space-x-3 transition-colors"
+                  >
+                    <span className="text-lg w-6 text-center">📺</span>
+                    <span>My Videos</span>
                   </Link>
                   <Link
                     href="/curriculum"

@@ -106,6 +106,49 @@ def speech_to_text(audio_path: str) -> str:
     result = model.transcribe(audio_path, fp16=False)
     return result["text"]
 
+def correct_korean_transcript(raw_transcript: str) -> str:
+    """
+    Whisper STT 결과를 LLM으로 한국어 어법에 맞게 교정합니다.
+    내용(뜻)은 바꾸지 않고, 맞춤법·어법·띄어쓰기만 수정합니다.
+    """
+    if not raw_transcript or not raw_transcript.strip():
+        return raw_transcript
+
+    prompt = f"""You are a Korean language proofreader.
+
+The following text was produced by a speech-to-text (STT) model and may contain:
+- Spacing errors (띄어쓰기 오류)
+- Incorrect Korean spelling (맞춤법 오류)
+- Unnatural grammar caused by mishearing (어법 오류)
+
+Please correct ONLY the above issues. Do NOT:
+- Change the meaning or content
+- Add or remove sentences
+- Translate anything
+
+Return ONLY the corrected Korean text, nothing else.
+
+STT Text:
+{raw_transcript[:3000]}
+"""
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="You are a Korean language proofreader. Return only the corrected text.",
+                temperature=0.1,  # 낮은 temperature = 일관성 높음
+            ),
+        )
+        corrected = response.text.strip()
+        print(f"✅ STT 교정 완료 ({len(raw_transcript)}자 → {len(corrected)}자)")
+        return corrected if corrected else raw_transcript
+    except Exception as e:
+        print(f"⚠️ STT 교정 실패 (원본 사용): {e}")
+        return raw_transcript  # 실패 시 원본 사용
+
+
 def evaluate_pronunciation(target_sentence: str, audio_path: str) -> dict:
     user_text = speech_to_text(audio_path)
     

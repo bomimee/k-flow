@@ -23,9 +23,9 @@ export async function fetchDueItems(userId: string): Promise<VocabularyItem[]> {
                 interval: item.interval,
                 repetitions: item.repetitions,
                 easeFactor: item.ease_factor,
-                nextReview: new Date(item.next_review),
+                nextReview: item.next_review ? new Date(item.next_review) : new Date(0),
                 lastReview: item.last_review ? new Date(item.last_review) : undefined,
-                successRate: item.success_rate
+                successRate: item.success_rate ?? 0
             }
         }));
     } catch (error) {
@@ -51,9 +51,9 @@ export async function fetchDueGrammarItems(userId: string): Promise<any[]> {
                 interval: item.interval,
                 repetitions: item.repetitions,
                 easeFactor: item.ease_factor,
-                nextReview: new Date(item.next_review),
+                nextReview: item.next_review ? new Date(item.next_review) : new Date(0),
                 lastReview: item.last_review ? new Date(item.last_review) : undefined,
-                successRate: item.success_rate
+                successRate: item.success_rate ?? 0
             }
         }));
     } catch (error) {

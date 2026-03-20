@@ -33,16 +33,28 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   });
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [showTranscript, setShowTranscript] = useState(false);
   const [apiReady, setApiReady] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<'idle' | 'recording' | 'processing'>('idle');
   const [userRecording, setUserRecording] = useState<UserRecording | null>(null);
   const [mimickingExercise, setMimickingExercise] = useState<MimickingExercise | null>(null);
   const [playerError, setPlayerError] = useState<{ code: number; message: string } | null>(null);
 
+  // Helper: Set state AND sync ref at the same time
+  const setCurrentSentenceAndRef = (s: DramaSentence | null) => {
+    currentSentenceRef.current = s;
+    setCurrentSentence(s);
+  };
+  const setIsPlayingAndRef = (v: boolean) => {
+    isPlayingRef.current = v;
+    setIsPlaying(v);
+  };
+
   const playerRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timeUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // ⚡ Ref-based state mirrors to avoid stale closures in setInterval
+  const currentSentenceRef = useRef<DramaSentence | null>(null);
+  const isPlayingRef = useRef<boolean>(false);
 
   useEffect(() => {
     initializeSession();
@@ -155,57 +167,52 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   };
 
   const onPlayerReady = (event: any) => {
-    if (currentSentence) {
-      // 리드인 버퍼(-0.3s) 적용하여 첫 마디 잘림 방지
-      event.target.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
+    const sentence = currentSentenceRef.current;
+    if (sentence) {
+      // ⚡ ref에서 읽어 Seek - stale closure 없음
+      event.target.seekTo(Math.max(0, sentence.startTime - 0.3), true);
     }
   };
 
   const onPlayerStateChange = (event: any) => {
-    // 1: playing, 2: paused
+    // 1: playing, 2: paused, 0: ended
     if (event.data === 1) {
-      setIsPlaying(true);
+      setIsPlayingAndRef(true);
       startTimeUpdates();
     } else {
-      setIsPlaying(false);
+      setIsPlayingAndRef(false);
       stopTimeUpdates();
     }
   };
 
   const startTimeUpdates = () => {
     if (timeUpdateIntervalRef.current) clearInterval(timeUpdateIntervalRef.current);
-    stopTimeUpdates(); // Clear any existing interval
-
-    let lastCheckTime = Date.now();
 
     timeUpdateIntervalRef.current = setInterval(() => {
-      if (playerRef.current && playerRef.current.getCurrentTime && isPlaying) {
+      // ⚡ Read from refs to always have the latest state (no stale closure)
+      const sentence = currentSentenceRef.current;
+      const playing = isPlayingRef.current;
+
+      if (playerRef.current && playerRef.current.getCurrentTime && playing && sentence) {
         const currentTime = playerRef.current.getCurrentTime();
-        setCurrentTime(currentTime); // Keep updating the state
-        const now = Date.now();
+        setCurrentTime(currentTime);
 
-        if (currentSentence) {
-          // 1. 종료 지점 체크 (정밀)
-          if (currentTime >= currentSentence.endTime) {
-            console.log('🛑 Precise stop at end time:', currentTime);
-            playerRef.current.pauseVideo();
-            setIsPlaying(false);
-            stopTimeUpdates();
-            return;
-          }
+        // 1. µ정전 종료 지점 체크: endTime 임박 시 일시 정지
+        if (currentTime >= sentence.endTime) {
+          console.log('🛑 End time reached, pausing.', { currentTime, end: sentence.endTime });
+          playerRef.current.pauseVideo();
+          setIsPlayingAndRef(false);
+          stopTimeUpdates();
+          return;
+        }
 
-          // 2. 싱크 이탈 감시 (Watchdog) - 500ms 마다 체크
-          if (now - lastCheckTime > 500) {
-            lastCheckTime = now;
-            // 현재 문장 범위를 크게 벗어났다면 재정렬 (리드인 고려)
-            if (currentTime < currentSentence.startTime - 1.0 || currentTime > currentSentence.endTime + 0.5) {
-              console.warn('⚠️ Sync Drift Detected! Re-seeking...', { currentTime, target: currentSentence.startTime });
-              playerRef.current.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
-            }
-          }
+        // 2. 싱크 이탈 감시 (Watchdog) - 1s 이상 볼어나오면 재정렬
+        if (currentTime < sentence.startTime - 1.5) {
+          console.warn('⚠️ Before start, re-seeking to:', sentence.startTime);
+          playerRef.current.seekTo(Math.max(0, sentence.startTime - 0.3), true);
         }
       }
-    }, 50); // 고정밀 체크 (50ms)
+    }, 50); // 50ms 간격으로 고정밀 체크
   };
 
   const stopTimeUpdates = () => {
@@ -218,10 +225,17 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   const initializeSession = () => {
     if (clips.length === 0) return;
 
+    // 타임스탬프 필터링 후 문장이 하나도 없을 수 있음
+    const firstClipWithSentences = clips.find(c => c.sentences.length > 0);
+    if (!firstClipWithSentences) {
+      console.warn('⚠️ No sentences with valid timestamps found in any clip.');
+      return;
+    }
+
     const newSession: MemorizationSession = {
       id: Date.now().toString(),
       clips,
-      currentClipIndex: 0,
+      currentClipIndex: clips.indexOf(firstClipWithSentences),
       currentSentenceIndex: 0,
       mode: 'practice',
       subtitleMode,
@@ -237,12 +251,13 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
     };
 
     setSession(newSession);
-    setCurrentClip(clips[0]);
-    setCurrentSentence(clips[0].sentences[0]);
-    updateExercise(clips[0].sentences[0]);
+    setCurrentClip(firstClipWithSentences);
+    setCurrentSentenceAndRef(firstClipWithSentences.sentences[0]);
+    updateExercise(firstClipWithSentences.sentences[0]);
   };
 
-  const updateExercise = (sentence: DramaSentence) => {
+  const updateExercise = (sentence: DramaSentence | null | undefined) => {
+    if (!sentence) return; // 가드
     const exercise = createMimickingExercise(sentence);
     setMimickingExercise(exercise);
   };
@@ -293,7 +308,8 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   };
 
   const handleStepAction = (step: MimickingStep, index: number) => {
-    if (!currentSentence || !mimickingExercise) return;
+    const sentence = currentSentenceRef.current; // ⚡ always fresh
+    if (!sentence || !mimickingExercise) return;
 
     if (step.type === 'record') {
       if (recordingStatus === 'idle') startRecording();
@@ -302,23 +318,19 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
     }
 
     if (playerRef.current) {
-      // Set playback rate based on step type
       let rate = 1.0;
       if (step.type === 'slow') rate = 0.8;
       else if (step.type === 'breakdown') rate = 0.7;
 
       try {
-        if (playerRef.current.setPlaybackRate) {
-          playerRef.current.setPlaybackRate(rate);
-        }
-        playerRef.current.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
+        if (playerRef.current.setPlaybackRate) playerRef.current.setPlaybackRate(rate);
+        playerRef.current.seekTo(Math.max(0, sentence.startTime - 0.3), true);
         playerRef.current.playVideo();
       } catch (err) {
         console.error('Playback action failed:', err);
       }
     }
 
-    // Mark current step as completed
     setMimickingExercise({
       ...mimickingExercise,
       steps: mimickingExercise.steps.map((s, i) =>
@@ -328,17 +340,15 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
   };
 
   const handlePlayPause = () => {
-    console.log('▶️ Play/Pause clicked');
+    const sentence = currentSentenceRef.current;
+    const playing = isPlayingRef.current;
+
     // If player is not ready, try to create it manually on click
     if (!playerRef.current) {
-      console.log('🔄 Player was not initialized. Attempting manual creation...');
       if (window.YT && window.YT.Player) {
         createPlayer();
-        // Give it a tiny bit of time to initialize then play
         setTimeout(() => {
-          if (playerRef.current && playerRef.current.playVideo) {
-            playerRef.current.playVideo();
-          }
+          if (playerRef.current?.playVideo) playerRef.current.playVideo();
         }, 500);
       } else {
         console.error('❌ YouTube API not ready yet');
@@ -346,33 +356,29 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
       return;
     }
 
-    if (!currentSentence) {
+    if (!sentence) {
       console.warn('⚠️ No current sentence selected');
       return;
     }
 
     try {
-      if (isPlaying) {
-        console.log('⏸️ Pausing video');
+      if (playing) {
         playerRef.current.pauseVideo();
       } else {
-        console.log('▶️ Playing video');
         const currentPos = typeof playerRef.current.getCurrentTime === 'function'
           ? playerRef.current.getCurrentTime()
-          : 0;
+          : -1;
 
-        if (currentPos >= currentSentence.endTime || currentPos < currentSentence.startTime - 0.5) {
-          playerRef.current.seekTo(Math.max(0, currentSentence.startTime - 0.3), true);
+        // 현재 위치가 문장 범위 밖이면 시작 지점으로 seek
+        if (currentPos < sentence.startTime - 0.5 || currentPos >= sentence.endTime) {
+          playerRef.current.seekTo(Math.max(0, sentence.startTime - 0.3), true);
         }
-        // 속도가 느리게 설정되어 있었다면 1.0으로 복구
-        if (playerRef.current.setPlaybackRate) {
-          playerRef.current.setPlaybackRate(1.0);
-        }
+        // 속도 정상화
+        if (playerRef.current.setPlaybackRate) playerRef.current.setPlaybackRate(1.0);
         playerRef.current.playVideo();
       }
     } catch (err) {
       console.error('❌ Error in handlePlayPause:', err);
-      // Fallback: Re-create player if something went wrong
       createPlayer();
     }
   };
@@ -478,12 +484,12 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
     if (nextSentenceIndex < currentClip.sentences.length) {
       // Move to next sentence in same clip
       const nextSentence = currentClip.sentences[nextSentenceIndex];
-      setCurrentSentence(nextSentence);
+      setCurrentSentenceAndRef(nextSentence); // ⚡ ref도 같이 업데이트
       setSession({ ...session, currentSentenceIndex: nextSentenceIndex });
       updateExercise(nextSentence);
       setUserRecording(null);
       if (playerRef.current) {
-        playerRef.current.seekTo(nextSentence.startTime, true);
+        playerRef.current.seekTo(Math.max(0, nextSentence.startTime - 0.3), true);
         playerRef.current.pauseVideo();
       }
     } else {
@@ -492,7 +498,7 @@ export default function DramaSentenceMemorizer({ clips, onSessionComplete, isSho
       if (nextClipIndex < clips.length) {
         const nextClip = clips[nextClipIndex];
         setCurrentClip(nextClip);
-        setCurrentSentence(nextClip.sentences[0]);
+        setCurrentSentenceAndRef(nextClip.sentences[0]); // ⚡ ref도 같이 업데이트
         setSession({
           ...session,
           currentClipIndex: nextClipIndex,

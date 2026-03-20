@@ -3,13 +3,14 @@
 import ModernNavigation from "@/app/components/ModernNavigation";
 import DramaSentenceMemorizer from "@/app/components/DramaSentenceMemorizer";
 import ResultResponse from "@/app/components/result";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import type { VideoClip, MemorizationSession } from "@/app/types/drama";
 import type { AnalysisResult } from "@/app/types/analysis";
 import { analyzeYouTube, mapAnalysisToVideoClip } from "@/app/services/youtube";
 import { useAuth } from "@/app/hooks/useAuth";
 
-export default function DramaPracticePage() {
+function DramaPracticeContent() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [sessionResults, setSessionResults] = useState<MemorizationSession | null>(null);
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -23,7 +24,38 @@ export default function DramaPracticePage() {
   const [trendingVideos, setTrendingVideos] = useState<any[]>([]);
   const [loadingTrending, setLoadingTrending] = useState(true);
 
-  const { user } = useAuth(); // ADDED: Auth hook to fetch user info for automatic level setting
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
+
+  // ?url= 파라미터가 있으면 자동으로 분석 시작 (my-videos '다시 연습' 버튼)
+  useEffect(() => {
+    const paramUrl = searchParams.get("url");
+    if (paramUrl && showWelcome && !loading) {
+      setYoutubeUrl(paramUrl);
+      // Detect shorts
+      const isShorts = paramUrl.includes("/shorts/");
+      setMediaType(isShorts ? "shorts" : "regular");
+      // Trigger analysis
+      const run = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+          const result = await analyzeYouTube(paramUrl, level, isShorts ? "shorts" : "regular");
+          setAnalysisResult(result);
+          setActiveClip(mapAnalysisToVideoClip(result));
+          setShowWelcome(false);
+          setShowPractice(false);
+          setSessionResults(null);
+        } catch (err: any) {
+          setError(err.message || "분석에 실패했습니다.");
+        } finally {
+          setLoading(false);
+        }
+      };
+      run();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     // Automatically set level based on user metadata
@@ -359,7 +391,11 @@ export default function DramaPracticePage() {
                 Practice Again
               </button>
               <a
-                href="/vocabulary-quiz"
+                href={
+                  analysisResult?.video_id
+                    ? `/vocabulary-quiz/video/${analysisResult.video_id}`
+                    : "/vocabulary-quiz"
+                }
                 className="btn-primary px-6 py-3"
               >
                 Try Vocabulary Quiz
@@ -415,5 +451,13 @@ export default function DramaPracticePage() {
         />
       </main>
     </div>
+  );
+}
+
+export default function DramaPracticePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center"><p>Loading...</p></div>}>
+      <DramaPracticeContent />
+    </Suspense>
   );
 }
