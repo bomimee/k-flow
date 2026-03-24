@@ -185,15 +185,36 @@ def evaluate_pronunciation(target_sentence: str, audio_path: str) -> dict:
         if not cleaned:
             return {
                 "score": 0,
+                "srs_quality": 1,
+                "heard_text": user_text,
                 "feedback": ["Could not properly evaluate the audio."],
                 "improvements": ["Please try recording again."]
             }
-            
-        return json.loads(cleaned)
+        
+        result = json.loads(cleaned)
+        
+        # score(0~100) → srs_quality(0~5) 변환
+        score = result.get("score", 0)
+        if score >= 90:
+            srs_quality = 5
+        elif score >= 75:
+            srs_quality = 4
+        elif score >= 60:
+            srs_quality = 3
+        elif score >= 40:
+            srs_quality = 2
+        else:
+            srs_quality = 1
+        
+        result["srs_quality"] = srs_quality
+        result["heard_text"] = user_text
+        return result
     except Exception as e:
         print("Pronunciation Eval Error:", e)
         return {
             "score": 0,
+            "srs_quality": 1,
+            "heard_text": "",
             "feedback": ["Error during evaluation."],
             "improvements": ["Please try again later."]
         }

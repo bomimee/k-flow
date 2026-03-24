@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { VocabularyItem, SRSStudyResults } from '@/app/types/vocabulary';
 import { SpacedRepetitionSystem } from '@/app/services/spacedRepetition';
 import { useAuth } from '@/app/hooks/useAuth';
@@ -9,6 +9,16 @@ interface SRSStudySessionProps {
   vocabulary: VocabularyItem[];
   onSessionComplete: (results: SRSStudyResults) => void;
 }
+
+interface PronunciationResult {
+  score: number;
+  srs_quality: number;
+  heard_text: string;
+  feedback: string[];
+  improvements: string[];
+}
+
+type RecordingState = 'idle' | 'recording' | 'evaluating' | 'done';
 
 export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSStudySessionProps) {
   const [session, setSession] = useState<{
@@ -31,6 +41,12 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
   const [loading, setLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const { user } = useAuth();
+
+  // 발음 녹음 관련 상태
+  const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [pronunciationResult, setPronunciationResult] = useState<PronunciationResult | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -68,7 +84,6 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
     }
   };
 
-
   const initializeSession = (vocabToUse: VocabularyItem[]) => {
     const recommendations = SpacedRepetitionSystem.getStudySessionRecommendations(vocabToUse);
 
@@ -94,6 +109,9 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
     setShowAnswer(false);
     setStartTime(Date.now());
     setHintsUsed(0);
+    // 카드 이동 시 발음 관련 상태 초기화
+    setRecordingState('idle');
+    setPronunciationResult(null);
   };
 
   const handleShowAnswer = () => {
@@ -105,56 +123,85 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
   };
 
   const speak = (text: string) => {
-    if (!('speechSynthesis' in window)) {
-      alert('Your browser does not support text-to-speech.');
-      return;
-    }
-
-    // Cancel any ongoing speech
+    if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'ko-KR';
-    utterance.rate = 0.9; // Slightly slower for clarity
-
+    utterance.rate = 0.9;
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);
     utterance.onerror = () => setIsPlaying(false);
-
     window.speechSynthesis.speak(utterance);
   };
 
-  const getHintContent = () => {
-    if (hintsUsed === 0) return null;
-    if (hintsUsed === 1) return <p className="text-lg font-medium animate-fade-in text-white/90">Hint: [{item.pronunciation}]</p>;
-
-    // Hint level 2: Show part of the meaning (masked)
-    const maskedMeaning = item.meaning.split('').map((char, i) => i === 0 || char === ' ' ? char : '_').join('');
-    return (
-      <div className="space-y-2 animate-fade-in">
-        <p className="text-lg font-medium text-white/90">Hint: [{item.pronunciation}]</p>
-        <p className="text-lg font-mono tracking-wider text-white/80">Mean: {maskedMeaning}</p>
-      </div>
-    );
+  // ── 발음 녹음 ───────────────────────────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        evaluatePronunciation();
+      };
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecordingState('recording');
+      setPronunciationResult(null);
+    } catch (err) {
+      console.error('Microphone access denied:', err);
+      alert('마이크 접근 권한이 필요합니다.');
+    }
   };
 
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+      setRecordingState('evaluating');
+    }
+  };
+
+  const evaluatePronunciation = async () => {
+    if (!session?.currentItem) return;
+    try {
+      const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', blob, 'recording.webm');
+      formData.append('target_sentence', session.currentItem.korean);
+
+      const res = await fetch('http://localhost:8000/evaluate-pronunciation', {
+        method: 'POST',
+        body: formData,
+      });
+      if (!res.ok) throw new Error('Evaluation failed');
+      const result: PronunciationResult = await res.json();
+      setPronunciationResult(result);
+      setRecordingState('done');
+    } catch (err) {
+      console.error('Pronunciation evaluation error:', err);
+      setRecordingState('idle');
+    }
+  };
+
+  const applyPronunciationScore = () => {
+    if (!pronunciationResult) return;
+    handleQualityRating(pronunciationResult.srs_quality);
+  };
+
+  // ── SRS 진행 ─────────────────────────────────────────────────────────────
   const handleQualityRating = async (quality: number) => {
     if (!session || !session.currentItem || !user) return;
 
     const timeSpent = Math.floor((Date.now() - startTime) / 1000);
     const updatedSRS = SpacedRepetitionSystem.calculateNextReview(session.currentItem.srsData, quality);
 
-    // Persist to DB in background
     updateSRSProgress(user.id, session.currentItem.id, updatedSRS);
-    const answer = {
-      itemId: session.currentItem.id,
-      quality,
-      timeSpent
-    };
-
+    const answer = { itemId: session.currentItem.id, quality, timeSpent };
     const updatedAnswers = [...session.answers, answer];
 
-    // Move to next item
     const nextIndex = session.currentIndex + 1;
     let nextItem: VocabularyItem | null = null;
     let isReviewMode = session.isReviewMode;
@@ -163,7 +210,6 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
       if (nextIndex < session.reviewItems.length) {
         nextItem = session.reviewItems[nextIndex];
       } else if (session.newItems.length > 0) {
-        // Switch to new items
         isReviewMode = false;
         nextItem = session.newItems[0];
         setSession(prev => prev ? { ...prev, currentIndex: 0, isReviewMode } : null);
@@ -184,10 +230,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
 
   const completeSession = (answers: Array<{ itemId: string; quality: number; timeSpent: number }>) => {
     if (!session) return;
-
-    // Update vocabulary items based on performance
     const itemsUpdated = SpacedRepetitionSystem.batchUpdateItems(vocabulary, answers);
-
     const results: SRSStudyResults = {
       itemsStudied: answers.length,
       correctAnswers: answers.filter(a => a.quality >= 3).length,
@@ -195,15 +238,53 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
       averageQuality: answers.reduce((sum, a) => sum + a.quality, 0) / answers.length,
       itemsUpdated
     };
-
     onSessionComplete(results);
   };
+
+  const getHintContent = () => {
+    if (!session?.currentItem) return null;
+    const item = session.currentItem;
+    if (hintsUsed === 0) return null;
+    if (hintsUsed === 1) return <p className="text-lg font-medium animate-fade-in text-white/90">Hint: [{item.pronunciation}]</p>;
+    const maskedMeaning = item.meaning.split('').map((char, i) => i === 0 || char === ' ' ? char : '_').join('');
+    return (
+      <div className="space-y-2 animate-fade-in">
+        <p className="text-lg font-medium text-white/90">Hint: [{item.pronunciation}]</p>
+        <p className="text-lg font-mono tracking-wider text-white/80">Mean: {maskedMeaning}</p>
+      </div>
+    );
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return 'text-green-400';
+    if (score >= 75) return 'text-blue-400';
+    if (score >= 60) return 'text-yellow-400';
+    if (score >= 40) return 'text-orange-400';
+    return 'text-red-400';
+  };
+
+  const getScoreEmoji = (score: number) => {
+    if (score >= 90) return '🎉';
+    if (score >= 75) return '😊';
+    if (score >= 60) return '🤔';
+    if (score >= 40) return '😟';
+    return '😵';
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg text-center">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading your study session...</p>
+      </div>
+    );
+  }
 
   if (!session || !session.currentItem) {
     return (
       <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg text-center">
         <h2 className="text-2xl font-bold mb-4">Study Session Complete!</h2>
-        <p className="text-gray-600">Great job! You've finished your study session.</p>
+        <p className="text-gray-600">Great job! You&apos;ve finished your study session.</p>
       </div>
     );
   }
@@ -236,15 +317,13 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
       {/* Progress Bar */}
       <div className="w-full bg-gray-200 rounded-full h-2 mb-6">
         <div
-          className={`h-2 rounded-full transition-all duration-300 ${session.isReviewMode ? 'bg-orange-500' : 'bg-green-500'
-            }`}
+          className={`h-2 rounded-full transition-all duration-300 ${session.isReviewMode ? 'bg-orange-500' : 'bg-green-500'}`}
           style={{ width: `${progress}%` }}
         ></div>
       </div>
 
       {/* Vocabulary Card */}
       <div className="relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-10 rounded-2xl mb-8 shadow-xl">
-        {/* Decorative elements */}
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
         <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-32 h-32 bg-indigo-400/20 rounded-full blur-3xl"></div>
 
@@ -269,9 +348,6 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
                 )}
               </button>
             </div>
-            {item.hanja && (
-              <p className="text-2xl font-medium text-white/80">{item.hanja}</p>
-            )}
           </div>
 
           <div className="min-h-[60px] flex flex-col justify-center">
@@ -282,7 +358,6 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
                 <p className="text-lg text-white/80">[{item.pronunciation}]</p>
                 <div className="pt-4 border-t border-white/20">
                   <p className="text-3xl font-bold mb-4">{item.meaning}</p>
-
                   <div className="bg-white/10 backdrop-blur-sm p-5 rounded-xl text-left border border-white/10">
                     <p className="text-xs font-bold uppercase tracking-wider text-white/40 mb-2">Example Sentence</p>
                     <p className="text-lg font-medium mb-1 leading-snug">{item.exampleSentence}</p>
@@ -319,6 +394,7 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
       </div>
 
       {!showAnswer ? (
+        /* ── 답 보기 전 ───────────────────────────────── */
         <div className="space-y-4">
           <button
             onClick={handleHint}
@@ -341,35 +417,127 @@ export default function SRSStudySession({ vocabulary, onSessionComplete }: SRSSt
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
-          <p className="text-center text-gray-600 mb-4">How well did you know this?</p>
-          <div className="grid grid-cols-5 gap-2">
-            {[1, 2, 3, 4, 5].map(quality => (
+        /* ── 답 확인 후 ───────────────────────────────── */
+        <div className="space-y-4">
+
+          {/* 발음 녹음 섹션 */}
+          <div className="border border-indigo-200 bg-indigo-50 rounded-xl p-4">
+            <p className="text-sm font-semibold text-indigo-700 mb-3 flex items-center gap-2">
+              🎙️ 발음 연습 (선택)
+            </p>
+
+            {recordingState === 'idle' && (
               <button
-                key={quality}
-                onClick={() => handleQualityRating(quality)}
-                className={`py-3 rounded-lg font-semibold transition-all ${quality === 1 ? 'bg-red-500 text-white hover:bg-red-600' :
-                  quality === 2 ? 'bg-orange-500 text-white hover:bg-orange-600' :
-                    quality === 3 ? 'bg-yellow-500 text-white hover:bg-yellow-600' :
-                      quality === 4 ? 'bg-green-500 text-white hover:bg-green-600' :
-                        'bg-blue-500 text-white hover:bg-blue-600'
-                  }`}
+                onClick={startRecording}
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
               >
-                {quality === 1 && '😵'}
-                {quality === 2 && '😟'}
-                {quality === 3 && '🤔'}
-                {quality === 4 && '😊'}
-                {quality === 5 && '🎉'}
-                <div className="text-xs mt-1">
-                  {quality === 1 && 'Again'}
-                  {quality === 2 && 'Hard'}
-                  {quality === 3 && 'Good'}
-                  {quality === 4 && 'Easy'}
-                  {quality === 5 && 'Perfect'}
-                </div>
+                <span className="w-3 h-3 rounded-full bg-red-400 animate-pulse"></span>
+                녹음 시작
               </button>
-            ))}
+            )}
+
+            {recordingState === 'recording' && (
+              <button
+                onClick={stopRecording}
+                className="w-full py-3 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition-all active:scale-[0.98] flex items-center justify-center gap-2 animate-pulse"
+              >
+                <span className="w-3 h-3 rounded-full bg-white"></span>
+                녹음 중... (클릭하여 정지)
+              </button>
+            )}
+
+            {recordingState === 'evaluating' && (
+              <div className="w-full py-3 bg-gray-100 text-gray-500 rounded-lg font-semibold flex items-center justify-center gap-2">
+                <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+                채점 중...
+              </div>
+            )}
+
+            {recordingState === 'done' && pronunciationResult && (
+              <div className="space-y-3">
+                {/* 점수 */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">{getScoreEmoji(pronunciationResult.score)}</span>
+                    <span className={`text-3xl font-bold ${getScoreColor(pronunciationResult.score)}`}>
+                      {pronunciationResult.score}점
+                    </span>
+                  </div>
+                  {pronunciationResult.heard_text && (
+                    <div className="text-right text-sm text-gray-500">
+                      <span className="block text-xs text-gray-400">인식된 발음</span>
+                      <span className="font-medium text-gray-700">&ldquo;{pronunciationResult.heard_text}&rdquo;</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 피드백 */}
+                {pronunciationResult.feedback?.length > 0 && (
+                  <div className="text-sm text-green-700 bg-green-50 rounded-lg p-2">
+                    {pronunciationResult.feedback.map((f, i) => (
+                      <p key={i}>✓ {f}</p>
+                    ))}
+                  </div>
+                )}
+                {pronunciationResult.improvements?.length > 0 && (
+                  <div className="text-sm text-orange-700 bg-orange-50 rounded-lg p-2">
+                    {pronunciationResult.improvements.map((imp, i) => (
+                      <p key={i}>→ {imp}</p>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={applyPronunciationScore}
+                    className="flex-1 py-3 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-all active:scale-[0.98]"
+                  >
+                    이 점수로 저장 ({pronunciationResult.srs_quality}/5)
+                  </button>
+                  <button
+                    onClick={() => { setRecordingState('idle'); setPronunciationResult(null); }}
+                    className="px-4 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-all"
+                    title="다시 녹음"
+                  >
+                    🔄
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* 자기평가 버튼 */}
+          <div className="space-y-2">
+            <p className="text-center text-gray-500 text-sm">또는 직접 평가하기</p>
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 3, 4, 5].map(quality => (
+                <button
+                  key={quality}
+                  onClick={() => handleQualityRating(quality)}
+                  className={`py-3 rounded-lg font-semibold transition-all ${quality === 1 ? 'bg-red-500 text-white hover:bg-red-600' :
+                    quality === 2 ? 'bg-orange-500 text-white hover:bg-orange-600' :
+                      quality === 3 ? 'bg-yellow-500 text-white hover:bg-yellow-600' :
+                        quality === 4 ? 'bg-green-500 text-white hover:bg-green-600' :
+                          'bg-blue-500 text-white hover:bg-blue-600'
+                    }`}
+                >
+                  {quality === 1 && '😵'}
+                  {quality === 2 && '😟'}
+                  {quality === 3 && '🤔'}
+                  {quality === 4 && '😊'}
+                  {quality === 5 && '🎉'}
+                  <div className="text-xs mt-1">
+                    {quality === 1 && 'Again'}
+                    {quality === 2 && 'Hard'}
+                    {quality === 3 && 'Good'}
+                    {quality === 4 && 'Easy'}
+                    {quality === 5 && 'Perfect'}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
         </div>
       )}
     </div>
