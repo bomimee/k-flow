@@ -96,7 +96,7 @@ export default function ModernNavigation() {
                   key={item.name}
                   href={item.href}
                   className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${isActive(item.href)
-                    ? 'bg-primary text-white shadow-sm'
+                    ? 'bg-primary text-var(--background) shadow-sm'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                 >
@@ -152,7 +152,7 @@ export default function ModernNavigation() {
                         {user.email}
                       </p>
                     </div>
-                    
+
                     <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--background)] transition-colors">
                       <span className="text-lg w-6 text-center">👤</span> My Info
                     </Link>
@@ -165,9 +165,9 @@ export default function ModernNavigation() {
                     <Link href="/saved-items" className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-[var(--background)] transition-colors">
                       <span className="text-lg w-6 text-center">🔖</span> My Saved Items
                     </Link>
-                    
+
                     <div className="border-t border-gray-100 my-2"></div>
-                    
+
                     <button
                       onClick={signOut}
                       className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
@@ -276,7 +276,7 @@ export default function ModernNavigation() {
                       <div className="text-xs text-gray-500">{user.email}</div>
                     </div>
                   </div>
-                  
+
                   <Link
                     href="/profile"
                     onClick={() => setIsMobileMenuOpen(false)}
@@ -309,7 +309,7 @@ export default function ModernNavigation() {
                     <span className="text-lg w-6 text-center">🔖</span>
                     <span>My Saved Items</span>
                   </Link>
-                  
+
                   <button
                     onClick={() => {
                       signOut();

@@ -10,10 +10,10 @@ import { useAuth } from "@/app/hooks/useAuth";
 type Tab = "quiz" | "vocabulary" | "streak";
 
 const rarityColor: Record<string, string> = {
-  common:    "text-gray-600 bg-gray-100",
-  uncommon:  "text-green-700 bg-green-100",
-  rare:      "text-blue-700 bg-blue-100",
-  epic:      "text-purple-700 bg-purple-100",
+  common: "text-gray-600 bg-gray-100",
+  uncommon: "text-green-700 bg-green-100",
+  rare: "text-blue-700 bg-blue-100",
+  epic: "text-purple-700 bg-purple-100",
   legendary: "text-yellow-700 bg-yellow-100",
 };
 
@@ -36,11 +36,10 @@ interface AnyAchievement {
 function AchievementCard({ ach }: { ach: AnyAchievement }) {
   return (
     <div
-      className={`bg-white rounded-xl shadow overflow-hidden transition-all ${
-        ach.is_unlocked
-          ? "ring-2 ring-yellow-400 ring-offset-1"
-          : "opacity-65 hover:opacity-85"
-      }`}
+      className={`bg-white rounded-xl shadow overflow-hidden transition-all ${ach.is_unlocked
+        ? "ring-2 ring-yellow-400 ring-offset-1"
+        : "opacity-65 hover:opacity-85"
+        }`}
     >
       <div className={`p-5 ${ach.is_unlocked ? "bg-gradient-to-br from-yellow-50 to-orange-50" : ""}`}>
         <div className="flex items-start justify-between mb-3">
@@ -90,16 +89,16 @@ export default function AchievementsPage() {
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<"all" | "unlocked" | "locked">("all");
 
-  const [quizStats, setQuizStats]   = useState<QuizStats | null>(null);
-  const [quizAch,   setQuizAch]     = useState<AnyAchievement[]>([]);
+  const [quizStats, setQuizStats] = useState<QuizStats | null>(null);
+  const [quizAch, setQuizAch] = useState<AnyAchievement[]>([]);
 
   const [savedStats, setSavedStats] = useState<{
     total: number; vocabulary: number; expression: number; grammar: number;
   } | null>(null);
-  const [savedAch, setSavedAch]     = useState<AnyAchievement[]>([]);
+  const [savedAch, setSavedAch] = useState<AnyAchievement[]>([]);
 
-  const [streakInfo, setStreakInfo]  = useState<StreakInfo | null>(null);
-  const [streakAch,  setStreakAch]   = useState<AnyAchievement[]>([]);
+  const [streakInfo, setStreakInfo] = useState<StreakInfo | null>(null);
+  const [streakAch, setStreakAch] = useState<AnyAchievement[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -109,34 +108,34 @@ export default function AchievementsPage() {
       getSavedItemsStats(user.id),
       fetchStreakStats(user.id),
     ]).then(([quiz, saved, streak]) => {
-      if (quiz)   { setQuizStats(quiz.stats);       setQuizAch(quiz.achievements as AnyAchievement[]); }
-      if (saved)  { setSavedStats(saved.stats);     setSavedAch(saved.achievements as AnyAchievement[]); }
-      if (streak) { setStreakInfo(streak.streak);   setStreakAch(streak.achievements as AnyAchievement[]); }
+      if (quiz) { setQuizStats(quiz.stats); setQuizAch(quiz.achievements as AnyAchievement[]); }
+      if (saved) { setSavedStats(saved.stats); setSavedAch(saved.achievements as AnyAchievement[]); }
+      if (streak) { setStreakInfo(streak.streak); setStreakAch(streak.achievements as AnyAchievement[]); }
     }).catch(console.error).finally(() => setLoading(false));
   }, [user]);
 
   const achByTab: Record<Tab, AnyAchievement[]> = {
-    quiz:       quizAch,
+    quiz: quizAch,
     vocabulary: savedAch,
-    streak:     streakAch,
+    streak: streakAch,
   };
   const activeAch = achByTab[tab];
-  const displayed  = activeAch.filter(a => {
+  const displayed = activeAch.filter(a => {
     if (filter === "unlocked") return a.is_unlocked;
-    if (filter === "locked")   return !a.is_unlocked;
+    if (filter === "locked") return !a.is_unlocked;
     return true;
   });
 
   const unlockedCount = activeAch.filter(a => a.is_unlocked).length;
   const allUnlocked = [...quizAch, ...savedAch, ...streakAch].filter(a => a.is_unlocked).length;
-  const allTotal    = quizAch.length + savedAch.length + streakAch.length;
+  const allTotal = quizAch.length + savedAch.length + streakAch.length;
   const totalPtsEarned = [...quizAch, ...savedAch, ...streakAch]
     .filter(a => a.is_unlocked).reduce((s, a) => s + a.points, 0);
 
   const tabs = [
-    { key: "quiz"       as Tab, label: "🎯 Quiz",         count: quizAch.length   },
-    { key: "vocabulary" as Tab, label: "📚 Saved Words",   count: savedAch.length  },
-    { key: "streak"     as Tab, label: "🔥 Streak",        count: streakAch.length },
+    { key: "quiz" as Tab, label: "🎯 Quiz", count: quizAch.length },
+    { key: "vocabulary" as Tab, label: "📚 Saved Words", count: savedAch.length },
+    { key: "streak" as Tab, label: "🔥 Streak", count: streakAch.length },
   ];
 
   return (
@@ -165,7 +164,7 @@ export default function AchievementsPage() {
         {user && !loading && (
           <>
             {/* Global progress banner */}
-            <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-white rounded-xl p-6 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-[var(--background)] to-[var(--lightblue)] text-black rounded-xl p-6 flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold">{allUnlocked} / {allTotal} Achievements</p>
                 <p className="text-sm opacity-80 mt-1">{totalPtsEarned.toLocaleString()} pts earned</p>
@@ -182,9 +181,9 @@ export default function AchievementsPage() {
             {/* Quick stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: "Quizzes Done",  value: quizStats?.total_completed ?? 0,          color: "text-blue-600"   },
-                { label: "Avg Accuracy",  value: `${quizStats?.average_accuracy ?? 0}%`,   color: "text-green-600"  },
-                { label: "Words Saved",   value: savedStats?.total ?? 0,                   color: "text-indigo-600" },
+                { label: "Quizzes Done", value: quizStats?.total_completed ?? 0, color: "text-blue-600" },
+                { label: "Avg Accuracy", value: `${quizStats?.average_accuracy ?? 0}%`, color: "text-green-600" },
+                { label: "Words Saved", value: savedStats?.total ?? 0, color: "text-indigo-600" },
                 {
                   label: "Streak",
                   value: streakInfo ? `${streakInfo.streak_days} 🔥` : "0 🔥",
@@ -204,11 +203,10 @@ export default function AchievementsPage() {
                 <button
                   key={t.key}
                   onClick={() => { setTab(t.key); setFilter("all"); }}
-                  className={`px-5 py-2.5 font-medium text-sm rounded-t-lg transition border-b-2 -mb-px ${
-                    tab === t.key
-                      ? "border-[var(--background)] text-[var(--background)] bg-white"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
+                  className={`px-5 py-2.5 font-medium text-sm rounded-t-lg transition border-b-2 -mb-px ${tab === t.key
+                    ? "border-[var(--background)] text-black bg-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                    }`}
                 >
                   {t.label} <span className="ml-1 text-xs text-gray-400">({t.count})</span>
                 </button>
@@ -219,7 +217,7 @@ export default function AchievementsPage() {
             {tab === "streak" && streakInfo && (
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: "Current Streak", value: streakInfo.streak_days,    icon: "🔥", color: "text-orange-500" },
+                  { label: "Current Streak", value: streakInfo.streak_days, icon: "🔥", color: "text-orange-500" },
                   { label: "Longest Streak", value: streakInfo.longest_streak, icon: "🏆", color: "text-yellow-600" },
                   {
                     label: "Last Active",
@@ -245,16 +243,15 @@ export default function AchievementsPage() {
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition capitalize ${
-                    filter === f
-                      ? "bg-[var(--background)] text-white"
-                      : "bg-white text-gray-600 border hover:border-gray-400"
-                  }`}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-medium transition capitalize ${filter === f
+                    ? "bg-[var(--background)] text-black"
+                    : "bg-white text-gray-600 border hover:border-gray-400"
+                    }`}
                 >
                   {f}
                   {f === "unlocked" ? ` (${unlockedCount})`
                     : f === "locked" ? ` (${activeAch.length - unlockedCount})`
-                    : ""}
+                      : ""}
                 </button>
               ))}
             </div>
@@ -306,7 +303,7 @@ export default function AchievementsPage() {
                   {[
                     { label: "Vocabulary", count: savedStats.vocabulary, icon: "🔤" },
                     { label: "Expressions", count: savedStats.expression, icon: "💬" },
-                    { label: "Grammar",     count: savedStats.grammar,    icon: "📐" },
+                    { label: "Grammar", count: savedStats.grammar, icon: "📐" },
                   ].map(item => (
                     <div key={item.label} className="bg-gray-50 rounded-lg p-4">
                       <p className="text-2xl">{item.icon}</p>
