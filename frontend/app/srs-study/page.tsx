@@ -2,6 +2,7 @@
 
 import ModernNavigation from "@/app/components/ModernNavigation";
 import SRSStudySession from "@/app/components/SRSStudySession";
+import SRSStoryMode from "@/app/components/SRSStoryMode";
 import { useState, useEffect } from "react";
 import type { VocabularyItem, SRSStudyResults } from "@/app/types/vocabulary";
 import { useAuth } from "@/app/hooks/useAuth";
@@ -11,7 +12,7 @@ import SRSGrammarStudySession from "@/app/components/SRSGrammarStudySession";
 
 export default function SRSStudyPage() {
   const [showWelcome, setShowWelcome] = useState(true);
-  const [studyMode, setStudyMode] = useState<'vocabulary' | 'grammar'>('vocabulary');
+  const [studyMode, setStudyMode] = useState<'vocabulary' | 'grammar' | 'story'>('vocabulary');
   const [studyResults, setStudyResults] = useState<SRSStudyResults | null>(null);
   const { user } = useAuth();
   const [srsStats, setSrsStats] = useState<{ dueToday: number; accuracy: number; streak: number; totalLearned: number } | null>(null);
@@ -159,20 +160,38 @@ export default function SRSStudyPage() {
                 </div>
               </div>
 
-              <div className="flex justify-center space-x-4">
+              <div className="space-y-3">
+                <div className="flex justify-center space-x-4">
+                  <button
+                    onClick={() => { setStudyMode('vocabulary'); handleStartStudy(); }}
+                    disabled={dueVocabulary.length === 0}
+                    className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueVocabulary.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  >
+                    Start Vocab Session ({dueVocabulary.length} due)
+                  </button>
+                  <button
+                    onClick={() => { setStudyMode('grammar'); handleStartStudy(); }}
+                    disabled={dueGrammar.length === 0}
+                    className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueGrammar.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  >
+                    Start Grammar Session ({dueGrammar.length} due)
+                  </button>
+                </div>
+
+                {/* Story Mode */}
                 <button
-                  onClick={() => { setStudyMode('vocabulary'); handleStartStudy(); }}
+                  onClick={() => { setStudyMode('story'); handleStartStudy(); }}
                   disabled={dueVocabulary.length === 0}
-                  className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueVocabulary.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                  className={`w-full py-4 text-lg rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${dueVocabulary.length > 0
+                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:shadow-violet-500/30 hover:opacity-90'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
                 >
-                  Start Vocab Session ({dueVocabulary.length} due)
-                </button>
-                <button
-                  onClick={() => { setStudyMode('grammar'); handleStartStudy(); }}
-                  disabled={dueGrammar.length === 0}
-                  className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueGrammar.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
-                >
-                  Start Grammar Session ({dueGrammar.length} due)
+                  <span className="text-2xl">✨</span>
+                  <div className="text-left">
+                    <div>AI Story Mode</div>
+                    <div className="text-sm font-normal opacity-80">Read a new story with today's words</div>
+                  </div>
                 </button>
               </div>
             </div>
@@ -253,7 +272,15 @@ export default function SRSStudyPage() {
       <ModernNavigation />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
-        {studyMode === 'vocabulary' ? (
+        {studyMode === 'story' ? (
+          user ? (
+            <SRSStoryMode
+              userId={user.id}
+              onSessionComplete={handleSessionComplete}
+              onBack={() => setShowWelcome(true)}
+            />
+          ) : null
+        ) : studyMode === 'vocabulary' ? (
           dueVocabulary.length > 0 ? (
             <SRSStudySession
               vocabulary={dueVocabulary}
@@ -261,7 +288,7 @@ export default function SRSStudyPage() {
             />
           ) : (
             <div className="text-center py-20 bg-white rounded-lg shadow-sm">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">You're all caught up on Vocabulary!</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">You&apos;re all caught up on Vocabulary!</h2>
               <p className="text-gray-600 mb-8">No more vocabulary to review today. Come back tomorrow.</p>
               <a href="/curriculum" className="flex-1 btn-primary px-6 py-3 rounded-lg text-white">
                 View study plan
@@ -276,7 +303,7 @@ export default function SRSStudyPage() {
             />
           ) : (
             <div className="text-center py-20 bg-white rounded-lg shadow-sm">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">You're all caught up on Grammar!</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">You&apos;re all caught up on Grammar!</h2>
               <p className="text-gray-600 mb-8">No more grammar points to review today. Come back tomorrow.</p>
               <a href="/curriculum" className="flex-1 btn-primary px-6 py-3 rounded-lg text-white">
                 View study plan

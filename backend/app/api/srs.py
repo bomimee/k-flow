@@ -201,3 +201,53 @@ async def update_grammar_srs_progress(update: GrammarSRSProgressUpdate):
         if hasattr(e, 'message'):
             detail = e.message
         raise HTTPException(status_code=500, detail=detail)
+
+from app.services.llm import generate_srs_story
+from pydantic import BaseModel as _BaseModel
+from typing import List as _List
+
+class StoryRequest(_BaseModel):
+    user_id: str
+    word_limit: int = 5
+
+@router.post("/srs/generate-story")
+async def create_story(req: StoryRequest):
+    try:
+        now = datetime.now(timezone.utc).isoformat()
+
+        # 복습 대상 단어 가져오기 (next_review <= now)
+        result = supabase.table("user_vocabulary_progress") \
+            .select("vocabulary_id, vocabulary(word, meaning, pronunciation)") \
+            .eq("user_id", req.user_id) \
+            .lte("next_review", now) \
+            .order("next_review", desc=False) \
+            .limit(req.word_limit) \
+            .execute()
+
+        items = result.data or []
+        if not items:
+            raise HTTPException(status_code=404, detail="No due words available for story generation")
+
+        words = []
+        for item in items:
+            vocab = item.get("vocabulary") or {}
+            if vocab and vocab.get("word"):
+                words.append({
+                    "id": item.get("vocabulary_id"),
+                    "word": vocab["word"],
+                    "meaning": vocab.get("meaning", ""),
+                    "pronunciation": vocab.get("pronunciation", ""),
+                })
+
+        if not words:
+            raise HTTPException(status_code=404, detail="No valid words found")
+
+        story = generate_srs_story(words)
+        story["words_used"] = words
+        return story
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Story generation endpoint error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

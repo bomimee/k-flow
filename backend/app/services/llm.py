@@ -236,3 +236,61 @@ def extract_json(text: str) -> str | None:
 
     return text[start:end+1]
 
+
+def generate_srs_story(words: list[dict]) -> dict:
+    """오늘 복습할 단어들로 짧은 한국어 스토리 + 퀴즈를 생성합니다."""
+    word_list = "\n".join(
+        f"- {w['word']} ({w.get('pronunciation', '')}) = {w['meaning']}"
+        for w in words
+    )
+
+    prompt = f"""You are a Korean language teacher creating a reading comprehension exercise.
+
+The learner needs to review these vocabulary words:
+{word_list}
+
+Create a SHORT natural Korean diary entry or mini-story (8-12 sentences) that:
+1. Uses ALL the vocabulary words above naturally in context
+2. Is appropriate for a Korean learner (not too complex)
+3. Has a clear narrative or daily-life theme
+
+Return ONLY valid JSON (no markdown) in this exact format:
+{{
+  "title": "Short title of the story in Korean",
+  "story": "The full Korean story text here...",
+  "translation": "Full English translation of the story",
+  "highlighted_words": [
+    {{
+      "word": "단어",
+      "meaning": "English meaning",
+      "pronunciation": "romanization",
+      "context_sentence": "The sentence from the story this word appears in"
+    }}
+  ],
+  "quiz": [
+    {{
+      "word": "단어",
+      "question": "A question in English testing understanding of this word in context",
+      "options": ["option A", "option B", "option C", "option D"],
+      "answer": "correct option"
+    }}
+  ]
+}}"""
+
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction="You are a helpful Korean language teacher. Return only valid JSON.",
+                temperature=0.7,
+            ),
+        )
+        content = response.text
+        cleaned = extract_json(content)
+        if not cleaned:
+            return {"error": "Failed to generate story"}
+        return json.loads(cleaned)
+    except Exception as e:
+        print(f"Story generation error: {e}")
+        return {"error": str(e)}
