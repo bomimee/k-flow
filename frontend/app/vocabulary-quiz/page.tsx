@@ -195,7 +195,7 @@ export default function VocabularyQuizPage() {
               </div>
 
               {/* Summary */}
-              <div className="bg-gradient-to-r from-primary to-primary-dark text-white p-6 rounded-lg">
+              <div className="bg-gradient-to-r from-primary to-primary-dark text-black p-6 rounded-lg">
                 <h3 className="font-semibold text-lg mb-3">Quiz Summary</h3>
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>• Mode: {quizConfig.mode}</div>

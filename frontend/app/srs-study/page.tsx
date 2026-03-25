@@ -165,14 +165,14 @@ export default function SRSStudyPage() {
                   <button
                     onClick={() => { setStudyMode('vocabulary'); handleStartStudy(); }}
                     disabled={dueVocabulary.length === 0}
-                    className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueVocabulary.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    className={`btn-primary w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueVocabulary.length > 0 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                   >
                     Start Vocab Session ({dueVocabulary.length} due)
                   </button>
                   <button
                     onClick={() => { setStudyMode('grammar'); handleStartStudy(); }}
                     disabled={dueGrammar.length === 0}
-                    className={`w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueGrammar.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
+                    className={`btn-primary w-1/2 py-4 text-lg rounded-xl font-bold transition-colors ${dueGrammar.length > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md' : 'bg-gray-200 text-gray-400 cursor-not-allowed'}`}
                   >
                     Start Grammar Session ({dueGrammar.length} due)
                   </button>
@@ -182,9 +182,9 @@ export default function SRSStudyPage() {
                 <button
                   onClick={() => { setStudyMode('story'); handleStartStudy(); }}
                   disabled={dueVocabulary.length === 0}
-                  className={`w-full py-4 text-lg rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${dueVocabulary.length > 0
-                      ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:shadow-violet-500/30 hover:opacity-90'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  className={`btn-secondary w-full py-4 text-lg rounded-xl font-bold transition-all flex items-center justify-center gap-3 ${dueVocabulary.length > 0
+                    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md hover:shadow-violet-500/30 hover:opacity-90'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
                 >
                   <span className="text-2xl">✨</span>

@@ -123,7 +123,7 @@ export default function HabitsPage() {
 
               <button
                 onClick={() => setShowWelcome(false)}
-                className="w-full btn-primary py-4 text-lg"
+                className="w-full btn-secondary py-4 text-lg"
               >
                 Open Habit Dashboard
               </button>
