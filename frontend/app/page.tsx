@@ -116,7 +116,7 @@ export default function HomePage() {
               <span className="block text-gradient">K-Flow</span>
             </h1>
             
-            <p className="text-xl lg:text-2xl text-white/90 mb-8 max-w-3xl mx-auto animate-slide-in">
+            <p className="text-xl lg:text-2xl text-[var(--font-dark)]/90 mb-8 max-w-3xl mx-auto animate-slide-in">
               Learn Korean through K-dramas, gamified quizzes, and personalized curriculum. 
               Build sustainable habits and achieve fluency faster than ever.
             </p>
@@ -214,11 +214,11 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-gradient-to-r from-primary to-secondary text-white">
+      <section className="py-20 bg-gradient-to-r from-primary to-secondary text-[var(--font-dark)]">
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">Join Thousands of Learners</h2>
-            <p className="text-xl text-white/90">
+            <p className="text-xl text-[var(--font-dark)]/90">
               See why K-Flow is the fastest way to learn Korean
             </p>
           </div>
@@ -226,19 +226,19 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-5xl font-bold mb-2">10K+</div>
-              <div className="text-white/80">Active Learners</div>
+              <div className="text-[var(--font-dark)]/80">Active Learners</div>
             </div>
             <div className="text-center">
               <div className="text-5xl font-bold mb-2">500+</div>
-              <div className="text-white/80">K-Drama Clips</div>
+              <div className="text-[var(--font-dark)]/80">K-Drama Clips</div>
             </div>
             <div className="text-center">
               <div className="text-5xl font-bold mb-2">50+</div>
-              <div className="text-white/80">Achievements</div>
+              <div className="text-[var(--font-dark)]/80">Achievements</div>
             </div>
             <div className="text-center">
               <div className="text-5xl font-bold mb-2">95%</div>
-              <div className="text-white/80">Success Rate</div>
+              <div className="text-[var(--font-dark)]/80">Success Rate</div>
             </div>
           </div>
         </div>
@@ -285,12 +285,12 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-accent to-accent-light text-white">
+      <section className="py-20 bg-gradient-to-r from-accent to-accent-light text-[var(--font-dark)]">
         <div className="max-w-4xl mx-auto text-center px-6">
           <h2 className="text-4xl lg:text-5xl font-bold mb-6">
             Ready to Start Your Korean Journey?
           </h2>
-          <p className="text-xl text-white/90 mb-8">
+          <p className="text-xl text-[var(--font-dark)]/90 mb-8">
             Join thousands of learners who have transformed their Korean skills with K-Flow.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -302,7 +302,7 @@ export default function HomePage() {
             </Link>
             <Link
               href="/vocabulary-quiz"
-              className="btn-outline border-white text-white hover:bg-white hover:text-accent text-lg px-8 py-4"
+              className="btn-primary border-white text-[var(--font-dark)] hover:bg-white hover:text-accent text-lg px-8 py-4"
             >
               Try Sample Quiz
             </Link>
